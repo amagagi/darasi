@@ -94,4 +94,9 @@ class Cours extends Model
     {
         return $query->where('est_gratuit', false)->where('prix', '>', 0);
     }
+
+    public function formateur()
+    {
+        return $this->belongsTo(User::class, 'formateur_id');
+    }
 }

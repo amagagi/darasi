@@ -75,4 +75,9 @@ class User extends Authenticatable
     {
         return $this->role === 'apprenant';
     }
+
+    public function cours()
+    {
+        return $this->hasMany(Cours::class, 'formateur_id');
+    }
 }

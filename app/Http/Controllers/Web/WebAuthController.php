@@ -1,7 +1,7 @@
 <?php
 // app/Http/Controllers/Api/AuthController.php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -17,8 +17,7 @@ use Illuminate\Validation\ValidationException;
  * @author amagagi
  * @version 1.0
  */
-class AuthController extends Controller
-{
+class WebAuthController extends Controller{
     /**
      * Inscription d'un nouvel utilisateur
      * 
