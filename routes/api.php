@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\CoursController;
 use App\Http\Controllers\Api\PoleController;
 use App\Http\Controllers\Api\DemandeController;
 use App\Http\Controllers\Api\InscriptionController;
+use App\Http\Controllers\Api\ModuleController;
+use App\Http\Controllers\Api\LeconController;
 
 // Routes publiques (pas besoin d'authentification)
 Route::post("/register", [AuthController::class, "register"]);
@@ -27,8 +29,14 @@ Route::middleware("auth:sanctum")->group(function () {
     // Cours
     Route::get("/cours/{id}/contenu", [CoursController::class, "contenu"]);
     
-    // Inscriptions (ces routes nécessitent d'être connecté)
+    // Inscriptions
     Route::post('/inscription/{cours_id}', [InscriptionController::class, 'store']);
     Route::get('/mes-inscriptions', [InscriptionController::class, 'mesInscriptions']);
     Route::get('/verifier-inscription/{cours_id}', [InscriptionController::class, 'verifierInscription']);
+    
+    // Modules et Leçons
+    Route::get('/cours/{cours_id}/modules', [ModuleController::class, 'index']);
+    Route::get('/modules/{id}', [ModuleController::class, 'show']);
+    Route::get('/lecons/{id}/contenu', [LeconController::class, 'contenu']);
+    Route::post('/lecons/{id}/complete', [LeconController::class, 'marquerComplete']);
 });
