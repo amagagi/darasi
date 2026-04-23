@@ -4,7 +4,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\DemandeFormation;
+use App\Models\DemandesFormation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -60,7 +60,7 @@ class DemandeController extends Controller
             ], 422);
         }
 
-        $demande = DemandeFormation::create([
+        $demande = DemandesFormation::create([
             'nom' => $request->nom,
             'email' => $request->email,
             'telephone' => $request->telephone,

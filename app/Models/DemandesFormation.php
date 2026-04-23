@@ -1,12 +1,13 @@
 <?php
-// app/Models/DemandeFormation.php
+// app/Models/DemandesFormation.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DemandeFormation extends Model
+class DemandesFormation extends Model
 {
+    protected $table = 'demandes_formation';  // AJOUTE CETTE LIGNE
     protected $fillable = [
         'nom', 'email', 'telephone', 'titre_cours_souhaite',
         'description', 'domaine', 'niveau_souhaite', 'statut',

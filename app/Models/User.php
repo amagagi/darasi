@@ -95,4 +95,11 @@ class User extends Authenticatable
             'id'                       // Clé locale dans inscriptions
         );
     }
+
+        // Dans app/Models/User.php, ajoute cette méthode :
+
+    public function autorisationsCorrection()
+    {
+        return $this->hasMany(AutorisationCorrection::class, 'formateur_id');
+    }
 }

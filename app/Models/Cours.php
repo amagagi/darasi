@@ -9,7 +9,7 @@ class Cours extends Model
 {
     protected $fillable = [
         'titre', 'description', 'objectifs', 'prerequis',
-        'pole_id', 'categorie_id', 'niveau_id',
+        'pole_id', 'formateur_id', 'categorie_id', 'niveau_id',  // AJOUTE formateur_id
         'image_couverture', 'video_presentation',
         'est_certifiant', 'note_minimale_certificat',
         'prix', 'est_gratuit', 'statut',
