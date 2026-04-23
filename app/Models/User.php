@@ -80,4 +80,19 @@ class User extends Authenticatable
     {
         return $this->hasMany(Cours::class, 'formateur_id');
     }
+
+        /**
+     * Récupérer les certificats de l'utilisateur via ses inscriptions
+     */
+    public function certificats()
+    {
+        return $this->hasManyThrough(
+            Certificat::class,        // Table cible
+            Inscription::class,        // Table intermédiaire
+            'apprenant_id',            // Clé étrangère dans inscriptions (vers users)
+            'inscription_id',          // Clé étrangère dans certificats (vers inscriptions)
+            'id',                      // Clé locale dans users
+            'id'                       // Clé locale dans inscriptions
+        );
+    }
 }

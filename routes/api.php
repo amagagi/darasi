@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\DemandeController;
 use App\Http\Controllers\Api\InscriptionController;
 use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\LeconController;
+use App\Http\Controllers\Api\ApprenantController;
 
 // Routes publiques (pas besoin d'authentification)
 Route::post("/register", [AuthController::class, "register"]);
@@ -39,4 +40,15 @@ Route::middleware("auth:sanctum")->group(function () {
     Route::get('/modules/{id}', [ModuleController::class, 'show']);
     Route::get('/lecons/{id}/contenu', [LeconController::class, 'contenu']);
     Route::post('/lecons/{id}/complete', [LeconController::class, 'marquerComplete']);
+
+// Apprenant
+Route::prefix('apprenant')->group(function () {
+    Route::get('/dashboard', [ApprenantController::class, 'dashboard']);
+    Route::get('/progression/{cours_id}', [ApprenantController::class, 'progressionCours']);
+    Route::post('/messages/envoyer', [ApprenantController::class, 'envoyerMessage']);
+    Route::get('/messages', [ApprenantController::class, 'mesMessages']);
+    Route::post('/messages/{id}/lire', [ApprenantController::class, 'marquerMessageLu']);
+    Route::get('/notifications', [ApprenantController::class, 'mesNotifications']);
+    Route::post('/notifications/{id}/lire', [ApprenantController::class, 'marquerNotificationLue']);
+});
 });

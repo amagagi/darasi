@@ -33,4 +33,19 @@ class Certificat extends Model
     {
         return $this->belongsTo(User::class, 'revoque_par');
     }
+
+        /**
+     * Récupérer l'utilisateur (apprenant) via l'inscription
+     */
+    public function apprenant()
+    {
+        return $this->hasOneThrough(
+            User::class,
+            Inscription::class,
+            'id',           // Clé dans inscriptions (pour liaison certificat)
+            'id',           // Clé dans users
+            'inscription_id', // Clé dans certificats (vers inscriptions)
+            'apprenant_id'   // Clé dans inscriptions (vers users)
+        );
+    }
 }
