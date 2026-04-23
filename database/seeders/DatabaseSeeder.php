@@ -54,6 +54,8 @@ class DatabaseSeeder extends Seeder
             PolesTableSeeder::class,
             NiveauxTableSeeder::class,
             AbonnementsTypesTableSeeder::class,
+            TestAuthSeeder::class,
+            AppDataSeeder::class,
         ]);
     }
 }

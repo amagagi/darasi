@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('tentatives_test_final', function (Blueprint $table) {
             $table->id();
             $table->foreignId('inscription_id')->constrained()->onDelete('cascade');
-            $table->foreignId('test_final_id')->constrained()->onDelete('cascade');
+            $table->foreignId('test_final_id')->constrained('tests_finaux')->onDelete('cascade');
             $table->decimal('note', 5, 2)->nullable();
             $table->boolean('est_reussi')->default(false);
             $table->integer('tentative_numero')->default(1);

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('reponses_questions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tentative_test_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('tentative_test_id')->nullable()->constrained('tentatives_tests')->onDelete('cascade');
             $table->foreignId('tentative_final_id')->nullable()->constrained('tentatives_test_final')->onDelete('cascade');
             $table->foreignId('question_id')->constrained()->onDelete('cascade');
             $table->text('reponse_texte')->nullable();

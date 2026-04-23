@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('questions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('test_id')->nullable()->constrained()->onDelete('cascade');
-            $table->foreignId('test_final_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('test_final_id')->nullable()->constrained('tests_finaux')->onDelete('cascade');
             $table->text('question');
             $table->enum('type', ['qcm', 'ouverte']);
             $table->integer('points')->default(1);
