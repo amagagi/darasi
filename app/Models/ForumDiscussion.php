@@ -23,8 +23,8 @@ class ForumDiscussion extends Model
         return $this->belongsTo(User::class, 'apprenant_id');
     }
 
-    public function reponses()
+        public function reponses()
     {
-        return $this->hasMany(ForumReponse::class);
+        return $this->hasMany(ForumReponse::class, 'discussion_id');
     }
 }

@@ -10,7 +10,7 @@ use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\LeconController;
 use App\Http\Controllers\Api\ApprenantController;
 use App\Http\Controllers\Api\Admin\AdminController;
-
+use App\Http\Controllers\Api\FormateurController;
 
 // Routes publiques
 Route::post("/register", [AuthController::class, "register"]);
@@ -108,5 +108,19 @@ Route::middleware("auth:sanctum")->group(function () {
         Route::post('/messages/{id}/lire', [ApprenantController::class, 'marquerMessageLu']);
         Route::get('/notifications', [ApprenantController::class, 'mesNotifications']);
         Route::post('/notifications/{id}/lire', [ApprenantController::class, 'marquerNotificationLue']);
+    });
+
+    // Routes formateur (protégées)
+    Route::middleware('auth:sanctum')->prefix('formateur')->group(function () {
+        Route::get('/dashboard', [FormateurController::class, 'dashboard']);
+        Route::get('/stats', [FormateurController::class, 'statistiques']);
+        Route::get('/cours', [FormateurController::class, 'mesCours']);
+        Route::get('/cours/{id}', [FormateurController::class, 'showCours']);
+        Route::get('/cours/{id}/apprenants', [FormateurController::class, 'apprenantsCours']);
+        Route::get('/cours/{id}/questions', [FormateurController::class, 'questionsCours']);
+        Route::post('/questions/{id}/repondre', [FormateurController::class, 'repondreQuestion']);
+        Route::put('/questions/{id}/resoudre', [FormateurController::class, 'resoudreQuestion']);
+        Route::get('/tentatives/{quiz_id}', [FormateurController::class, 'tentativesQuiz']);
+        Route::post('/correction/{reponse_id}', [FormateurController::class, 'corrigerQuestion']);
     });
 });
