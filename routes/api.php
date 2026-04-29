@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CoursController;
 use App\Http\Controllers\Api\PoleController;
 use App\Http\Controllers\Api\DemandeController;
+use App\Http\Controllers\Api\PaiementController;
 use App\Http\Controllers\Api\InscriptionController;
 use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\LeconController;
@@ -37,6 +38,18 @@ Route::middleware("auth:sanctum")->group(function () {
     Route::put("/profile", [AuthController::class, "updateProfile"]);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
     Route::post('/email/resend', [AuthController::class, 'resendVerification']);
+
+    // routes/api.php - Ajouter dans la section auth:sanctum
+
+
+    // Paiements
+    Route::middleware('auth:sanctum')->prefix('paiement')->group(function () {
+        Route::post('/initier', [PaiementController::class, 'initier']);
+        Route::get('/statut/{transaction_id}', [PaiementController::class, 'statut']);
+    });
+
+    // Webhook (public, pas besoin d'auth)
+    Route::post('/webhooks/komipay', [PaiementController::class, 'webhook']);
     
     // Admin Routes 
     Route::prefix('admin')->group(function () {
