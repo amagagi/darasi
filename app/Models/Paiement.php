@@ -10,7 +10,11 @@ class Paiement extends Model
     protected $fillable = [
         'apprenant_id', 'cours_id', 'abonnement_type_id',
         'montant', 'reference_komipay', 'statut',
-        'mode_paiement', 'date_paiement'
+        'mode_paiement', 'date_paiement',
+        'transaction_id',           // ← AJOUTER
+        'tentatives',               // ← AJOUTER
+        'erreur_message',           // ← AJOUTER
+        'code_validation'           // ← AJOUTER
     ];
 
     protected $casts = [
