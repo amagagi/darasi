@@ -26,6 +26,7 @@ Route::middleware("auth:sanctum")->group(function () {
     
     // Cours
     Route::get("/cours/{id}/contenu", [CoursController::class, "contenu"]);
+    Route::get("/mes-cours", [CoursController::class, "mesCours"]);
     
     // Inscriptions (ces routes nécessitent d'être connecté)
     Route::post('/inscription/{cours_id}', [InscriptionController::class, 'store']);

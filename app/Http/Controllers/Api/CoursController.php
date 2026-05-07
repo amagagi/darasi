@@ -162,4 +162,26 @@ class CoursController extends Controller
             'data' => $modules
         ]);
     }
+
+    /**
+     * Liste des cours créés par le formateur connecté
+     * 
+     * @method GET
+     * @endpoint /api/mes-cours
+     * @requires Auth (Role: formateur)
+     */
+    public function mesCours()
+    {
+        $user = auth()->user();
+        
+        $cours = Cours::where('formateur_id', $user->id)
+            ->with(['pole'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+        return response()->json([
+            'success' => true,
+            'data' => $cours
+        ]);
+    }
 }
