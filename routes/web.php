@@ -8,6 +8,12 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::post('/login', [WebAuthController::class, 'login'])->name('login');
-Route::post('/register', [WebAuthController::class, 'register'])->name('register');
-Route::post('/logout', [WebAuthController::class, 'logout'])->name('logout')->middleware('auth');
+// Changer le préfixe des routes web pour éviter conflit avec API
+Route::post('/web/login', [WebAuthController::class, 'login'])->name('web.login');
+Route::post('/web/register', [WebAuthController::class, 'register'])->name('web.register');
+Route::post('/web/logout', [WebAuthController::class, 'logout'])->name('web.logout')->middleware('auth');
+
+// Route pour la réinitialisation de mot de passe
+Route::get('/password/reset/{token}', function ($token) {
+    return view('auth.reset-password', ['token' => $token]);
+})->name('password.reset');
