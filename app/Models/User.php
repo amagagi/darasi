@@ -102,4 +102,55 @@ class User extends Authenticatable
     {
         return $this->hasMany(AutorisationCorrection::class, 'formateur_id');
     }
+
+        /**
+         * Vérifier si l'utilisateur a un abonnement actif pour une catégorie
+         * 
+         * @param int $categorieId
+         * @return bool
+         */
+        public function aAbonnementActifPourCategorie($categorieId)
+        {
+            return $this->abonnements()
+                ->where('categorie_id', $categorieId)
+                ->where('statut', 'actif')
+                ->where('date_fin', '>', now())
+                ->exists();
+        }
+
+        /**
+         * Vérifier si l'utilisateur peut accéder à un cours
+         * 
+         * @param Cours $cours
+         * @return bool
+         */
+        public function peutAccederCours($cours)
+        {
+            // 1. Cours gratuit
+            if ($cours->est_gratuit) return true;
+            
+            // 2. Achat individuel (via inscription payante)
+            if ($this->inscriptions()->where('cours_id', $cours->id)->exists()) return true;
+            
+            // 3. Abonnement actif pour la catégorie du cours
+            if ($this->aAbonnementActifPourCategorie($cours->categorie_id)) return true;
+            
+            return false;
+        }
+
+        /**
+         * Récupérer les catégories pour lesquelles l'utilisateur a un abonnement actif
+         * 
+         * @return \Illuminate\Support\Collection
+         */
+        public function categoriesAvecAbonnementActif()
+        {
+            return $this->abonnements()
+                ->where('statut', 'actif')
+                ->where('date_fin', '>', now())
+                ->with('categorie')
+                ->get()
+                ->pluck('categorie')
+                ->filter();
+        }
 }
