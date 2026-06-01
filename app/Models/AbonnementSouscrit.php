@@ -25,6 +25,7 @@ use Carbon\Carbon;
  */
 class AbonnementSouscrit extends Model
 {
+    protected $table = 'abonnements_souscrits';  // ← AJOUTER CETTE LIGNE
     protected $fillable = [
         'apprenant_id', 'type_abonnement_id', 'categorie_id',  // ← AJOUTER categorie_id
         'date_debut', 'date_fin', 'statut', 'paiement_id'
