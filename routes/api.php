@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\PoleController;
 use App\Http\Controllers\Api\DemandeController;
 use App\Http\Controllers\Api\PaiementController;
 use App\Http\Controllers\Api\InscriptionController;
+use App\Http\Controllers\Api\AbonnementController;
 use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\LeconController;
 use App\Http\Controllers\Api\ApprenantController;
@@ -105,6 +106,11 @@ Route::middleware("auth:sanctum")->group(function () {
         Route::post('/inscription/{cours_id}', [InscriptionController::class, 'store']);
         Route::get('/mes-inscriptions', [InscriptionController::class, 'mesInscriptions']);
         Route::get('/verifier-inscription/{cours_id}', [InscriptionController::class, 'verifierInscription']);
+
+        // Abonnements apprenant
+        Route::get('/abonnements', [AbonnementController::class, 'index']);
+        Route::get('/mes-abonnements', [AbonnementController::class, 'mesAbonnements']);
+        Route::post('/abonnements/{id}/souscrire', [AbonnementController::class, 'souscrire']);
         
         // Modules et Leçons
         Route::get('/cours/{cours_id}/modules', [ModuleController::class, 'index']);

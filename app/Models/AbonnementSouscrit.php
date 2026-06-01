@@ -8,6 +8,8 @@ use Carbon\Carbon;
 
 class AbonnementSouscrit extends Model
 {
+    protected $table = 'abonnements_souscrits';
+
     protected $fillable = [
         'apprenant_id', 'type_abonnement_id', 'date_debut',
         'date_fin', 'statut', 'paiement_id'

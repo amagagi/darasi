@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cours;
+use App\Models\AbonnementSouscrit;
 use App\Models\Inscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -102,6 +103,40 @@ class InscriptionController extends Controller
             return response()->json([
                 'error' => 'Vous êtes déjà inscrit à ce cours.'
             ], 403);
+        }
+
+        $abonnementActif = AbonnementSouscrit::where('apprenant_id', $user->id)
+            ->where('statut', 'actif')
+            ->where('date_fin', '>=', now())
+            ->latest()
+            ->first();
+
+        if ($abonnementActif) {
+            $inscription = Inscription::create([
+                'apprenant_id' => $user->id,
+                'cours_id' => $cours_id,
+                'progression' => 0,
+                'statut' => 'actif',
+                'date_debut' => now(),
+                'abonnement_id' => $abonnementActif->id,
+                'est_via_abonnement' => true
+            ]);
+
+            $cours->increment('nb_apprenants');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Inscription réussie via votre abonnement actif.',
+                'data' => [
+                    'id' => $inscription->id,
+                    'cours_id' => $inscription->cours_id,
+                    'cours_titre' => $cours->titre,
+                    'statut' => $inscription->statut,
+                    'progression' => $inscription->progression,
+                    'date_debut' => $inscription->date_debut,
+                    'est_via_abonnement' => true
+                ]
+            ], 201);
         }
 
         // ÉTAPE 5 : Vérifier si le cours est payant
