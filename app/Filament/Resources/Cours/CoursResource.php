@@ -132,6 +132,33 @@ class CoursResource extends Resource
                 ->required()
                 ->native(false),
 
+            Forms\Components\Repeater::make('autorisationsCorrection')
+            ->label('Formateurs autorisés à corriger ce cours')
+            ->relationship('autorisationsCorrection')
+            ->schema([
+                Forms\Components\Select::make('formateur_id')
+                    ->label('Formateur')
+                    ->options(User::where('role', 'formateur')->pluck('nom', 'id'))
+                    ->searchable()
+                    ->required(),
+                    
+                Forms\Components\Toggle::make('est_active')
+                    ->label('Autorisation active')
+                    ->default(true),
+            ])
+            ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
+                $data['autorise_par'] = auth()->id(); // L'admin connecté
+                $data['date_autorisation'] = now();
+                return $data;
+            })
+            ->mutateRelationshipDataBeforeSaveUsing(function (array $data): array {
+                $data['autorise_par'] = auth()->id();
+                $data['date_autorisation'] = now();
+                return $data;
+            })
+            ->columnSpanFull()
+            ->visible(fn () => auth()->user()->role === 'admin'),
+
             Forms\Components\TextInput::make('note_moyenne')
                 ->numeric()
                 ->default(0)
@@ -148,6 +175,7 @@ class CoursResource extends Resource
 
             Forms\Components\DateTimePicker::make('published_at'),
         ]);
+
     }
     // =========================
     // TABLE
@@ -200,6 +228,17 @@ class CoursResource extends Resource
                         'success' => 'publie',
                         'danger' => 'archive',
                     ]),
+
+                Tables\Columns\TextColumn::make('autorisations_correction')
+                ->label('Correcteurs autorisés')
+                ->formatStateUsing(fn ($record) => 
+                    $record->autorisationsCorrection
+                        ->where('est_active', true)
+                        ->pluck('formateur.nom')
+                        ->implode(', ') ?: '-'
+                )
+                ->toggleable()
+                ->visible(fn () => auth()->user()->role === 'admin'), // ✅ Seul admin voit cette colonne
 
                 Tables\Columns\TextColumn::make('nb_apprenants')
                     ->sortable()

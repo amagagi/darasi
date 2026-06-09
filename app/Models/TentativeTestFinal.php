@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class TentativeTestFinal extends Model
 {
+    // ✅ Ajouter cette ligne
+    protected $table = 'tentatives_test_final';
+    
     protected $fillable = [
         'inscription_id', 'test_final_id', 'note', 'est_reussi',
         'tentative_numero', 'date_tentative', 'date_prochaine_autorisee',
@@ -33,11 +36,11 @@ class TentativeTestFinal extends Model
 
     public function reponses()
     {
-        return $this->hasMany(ReponseQuestion::class);
+        return $this->hasMany(ReponseQuestion::class, 'tentative_final_id');
     }
 
     public function certificat()
     {
-        return $this->hasOne(Certificat::class);
+        return $this->hasOne(Certificat::class, 'tentative_final_id');
     }
 }
