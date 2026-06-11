@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\WebAuthController;
+use App\Models\Notification;
 
 // Routes web (navigateur)
 Route::get('/', function () {
@@ -17,3 +18,12 @@ Route::post('/web/logout', [WebAuthController::class, 'logout'])->name('web.logo
 Route::get('/password/reset/{token}', function ($token) {
     return view('auth.reset-password', ['token' => $token]);
 })->name('password.reset');
+
+
+Route::post('/admin/notifications/{id}/mark-read', function ($id) {
+    $notification = Notification::find($id);
+    if ($notification) {
+        $notification->update(['est_lu' => true]);
+    }
+    return response()->json(['success' => true]);
+})->middleware(['auth'])->name('notifications.mark-read');

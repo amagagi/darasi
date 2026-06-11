@@ -11,7 +11,10 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Filament\Forms;
 use Filament\Tables;
-
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\CoursExport;
+use Filament\Actions\Action;  
 class CoursResource extends Resource
 {
     protected static ?string $model = Cours::class;
@@ -183,6 +186,26 @@ class CoursResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->headerActions([
+                Action::make('export_excel')
+                    ->label('📊 Exporter Excel')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('success')
+                    ->action(function () {
+                        return Excel::download(new CoursExport(), 'cours.xlsx');
+                    }),
+                Action::make('export_pdf')
+                    ->label('📄 Exporter PDF')
+                    ->icon('heroicon-o-document')
+                    ->color('danger')
+                    ->action(function () {
+                        $cours = \App\Models\Cours::with(['formateur', 'categorie'])->get();
+                        $pdf = Pdf::loadView('exports.cours-pdf', compact('cours'));
+                        return response()->streamDownload(function () use ($pdf) {
+                            echo $pdf->output();
+                        }, 'cours.pdf');
+                    }),
+            ])
             ->columns([
 
                 Tables\Columns\TextColumn::make('titre')
