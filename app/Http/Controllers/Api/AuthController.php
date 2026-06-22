@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;  // ← AJOUTER
 
 class AuthController extends Controller
 {
@@ -51,11 +52,12 @@ class AuthController extends Controller
 
     /**
      * Connexion d'un utilisateur
+     * Accepte email OU numéro de téléphone
      */
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'login' => 'required|string',
             'password' => 'required',
         ]);
 
@@ -63,13 +65,49 @@ class AuthController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $user = User::where('email', $request->email)->first();
+        // 🔥 Rate Limiting : Limiter les tentatives
+        $login = $request->login;
+        $key = 'login-attempt:' . md5($login);  // Clé unique par login
+
+        // Vérifier si trop de tentatives
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+            $minutes = ceil($seconds / 60);
+            
+            return response()->json([
+                'error' => 'Trop de tentatives de connexion.',
+                'message' => "Veuillez réessayer dans {$minutes} minute(s).",
+                'retry_after' => $seconds
+            ], 429);
+        }
+
+        // Déterminer si c'est un email ou un téléphone
+        if (filter_var($login, FILTER_VALIDATE_EMAIL)) {
+            $field = 'email';
+        } else {
+            $field = 'telephone';
+        }
+
+        $user = User::where($field, $login)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
+            // 🔥 Incrémenter les tentatives échouées
+            RateLimiter::hit($key, 60); // Bloquer pendant 60 secondes
+            
             throw ValidationException::withMessages([
-                'email' => ['Les identifiants sont incorrects.'],
+                'login' => ['Les identifiants sont incorrects.'],
             ]);
         }
+
+        // Vérifier si le compte est actif
+        if (!$user->is_active) {
+            throw ValidationException::withMessages([
+                'login' => ['Votre compte est désactivé. Contactez l\'administrateur.'],
+            ]);
+        }
+
+        // 🔥 Réinitialiser les tentatives (connexion réussie)
+        RateLimiter::clear($key);
 
         // Supprimer les anciens tokens
         $user->tokens()->delete();
@@ -130,7 +168,7 @@ class AuthController extends Controller
         ]);
     }
 
-        /**
+    /**
      * Envoyer un lien de réinitialisation du mot de passe
      * 
      * @method POST
@@ -170,7 +208,7 @@ class AuthController extends Controller
         }
     }
 
-        /**
+    /**
      * Réinitialiser le mot de passe avec le token
      * 
      * @method POST
@@ -206,7 +244,7 @@ class AuthController extends Controller
         ], 400);
     }
 
-        /**
+    /**
      * Changer le mot de passe (utilisateur connecté)
      * 
      * @method POST
@@ -239,7 +277,7 @@ class AuthController extends Controller
         ]);
     }
 
-        /**
+    /**
      * Vérifier l'email de l'utilisateur
      * 
      * @method GET
@@ -265,14 +303,14 @@ class AuthController extends Controller
         ]);
     }
 
-        /**
+    /**
      * Renvoyer l'email de vérification
      * 
      * @method POST
      * @endpoint /api/email/resend
      * @requires Auth
      */
-        public function resendVerification(Request $request)
+    public function resendVerification(Request $request)
     {
         try {
             $user = $request->user();

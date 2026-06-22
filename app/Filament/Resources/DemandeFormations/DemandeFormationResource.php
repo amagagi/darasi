@@ -24,6 +24,8 @@ class DemandeFormationResource extends Resource
 
     protected static ?string $modelLabel = 'Demande';
 
+    protected static ?string $slug = 'demande-formations';  // ← AJOUTER CETTE LIGNE
+
     // =========================
     // FORM
     // =========================
@@ -96,6 +98,14 @@ class DemandeFormationResource extends Resource
                 ->placeholder('Réponse à la demande...')
                 ->visible(fn ($get) => $get('statut') !== 'en_attente'),
         ]);
+    }
+
+    // =========================
+    // INFOLIST  ← NOUVEAU
+    // =========================
+    public static function infolist(Schema $schema): Schema
+    {
+        return \App\Filament\Resources\DemandeFormations\Schemas\DemandeFormationInfolist::configure($schema);
     }
 
     // =========================
@@ -180,6 +190,7 @@ class DemandeFormationResource extends Resource
             'index' => \App\Filament\Resources\DemandeFormations\Pages\ListDemandeFormations::route('/'),
             'create' => \App\Filament\Resources\DemandeFormations\Pages\CreateDemandeFormation::route('/create'),
             'edit' => \App\Filament\Resources\DemandeFormations\Pages\EditDemandeFormation::route('/{record}/edit'),
+            'view' => \App\Filament\Resources\DemandeFormations\Pages\ViewDemandeFormation::route('/{record}'),  // ← AJOUTÉ
         ];
     }
 }

@@ -94,8 +94,9 @@ class WebAuthController extends Controller{
      */
     public function login(Request $request)
     {
+        // 1. On accepte "login" au lieu de "email"
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'login' => 'required|string',  // ← changement ici
             'password' => 'required',
         ]);
 
@@ -103,18 +104,26 @@ class WebAuthController extends Controller{
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $user = User::where('email', $request->email)->first();
+        // 2. On détermine si c'est un email ou un téléphone
+        $login = $request->login;
+        
+        if (filter_var($login, FILTER_VALIDATE_EMAIL)) {
+            $field = 'email';
+        } else {
+            $field = 'telephone';
+        }
+
+        // 3. On cherche l'utilisateur
+        $user = User::where($field, $login)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['Les identifiants sont incorrects.'],
+                'login' => ['Les identifiants sont incorrects.'],
             ]);
         }
 
-        // Supprime les anciens tokens
+        // 4. Le reste ne change pas
         $user->tokens()->delete();
-        
-        // Crée un nouveau token
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([

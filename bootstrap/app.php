@@ -4,7 +4,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\CheckUserActive;  // ← AJOUTE CET IMPORT
+use App\Http\Middleware\CheckUserActive;
+use App\Http\Middleware\VerifyRecaptcha;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,15 +15,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Fusionne les deux configurations en une seule
+        // Middleware globaux
         $middleware->append(CheckUserActive::class);
+        
+        // Middlewares nommés (alias)
+        $middleware->alias([
+            'recaptcha' => VerifyRecaptcha::class,
+        ]);
     })
     ->withSchedule(function (Schedule $schedule) {
-        // Tous les jours à 8h
         $schedule->command('abonnements:check-expiration')->dailyAt('08:00');
-        
-        // Alternative: toutes les minutes pour test
-        // $schedule->command('abonnements:check-expiration')->everyMinute();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

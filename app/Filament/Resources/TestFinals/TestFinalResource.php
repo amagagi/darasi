@@ -24,6 +24,8 @@ class TestFinalResource extends Resource
 
     protected static ?string $modelLabel = 'Test final';
 
+    protected static ?string $slug = 'test-finals';  // ← AJOUTER CETTE LIGNE
+
     // =========================
     // FORM
     // =========================
@@ -68,6 +70,53 @@ class TestFinalResource extends Resource
                 ->minValue(1)
                 ->suffix('min')
                 ->helperText('Laisser vide pour illimité'),
+        ]);
+    }
+
+    // =========================
+    // INFOLIST  ← NOUVEAU
+    // =========================
+    public static function infolist(Schema $schema): Schema
+    {
+        return $schema->schema([
+
+            \Filament\Infolists\Components\TextEntry::make('cours.titre')
+                ->label('Cours')
+                ->badge()
+                ->color('primary'),
+
+            \Filament\Infolists\Components\TextEntry::make('titre')
+                ->label('Titre du test final')
+                ->weight('bold'),
+
+            \Filament\Infolists\Components\TextEntry::make('description')
+                ->label('Description')
+                ->placeholder('Aucune description')
+                ->columnSpanFull(),
+
+            \Filament\Infolists\Components\TextEntry::make('note_minimale')
+                ->label('Note minimale')
+                ->formatStateUsing(fn ($state) => $state . '%')
+                ->badge()
+                ->color('warning'),
+
+            \Filament\Infolists\Components\TextEntry::make('duree_limite')
+                ->label('Durée limite')
+                ->formatStateUsing(fn ($state) => $state ? $state . ' minutes' : 'Illimité'),
+
+            \Filament\Infolists\Components\TextEntry::make('questions_count')
+                ->label('Nombre de questions')
+                ->state(fn ($record) => $record->questions()->count())
+                ->badge()
+                ->color('success'),
+
+            \Filament\Infolists\Components\TextEntry::make('created_at')
+                ->label('Créé le')
+                ->dateTime('d/m/Y H:i'),
+
+            \Filament\Infolists\Components\TextEntry::make('updated_at')
+                ->label('Modifié le')
+                ->dateTime('d/m/Y H:i'),
         ]);
     }
 
@@ -152,6 +201,7 @@ class TestFinalResource extends Resource
             'index' => \App\Filament\Resources\TestFinals\Pages\ListTestFinals::route('/'),
             'create' => \App\Filament\Resources\TestFinals\Pages\CreateTestFinal::route('/create'),
             'edit' => \App\Filament\Resources\TestFinals\Pages\EditTestFinal::route('/{record}/edit'),
+            'view' => \App\Filament\Resources\TestFinals\Pages\ViewTestFinal::route('/{record}'),  // ← AJOUTER
         ];
     }
 }
