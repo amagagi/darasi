@@ -44,10 +44,9 @@ class AbonnementSouscrit extends Model
         return $this->belongsTo(User::class, 'apprenant_id');
     }
 
-    /**
-     * La formule d'abonnement choisie
-     */
-    public function type()
+
+        // La relation s'appelle 'type' mais dans le Resource on utilise 'typeAbonnement'
+    public function typeAbonnement()
     {
         return $this->belongsTo(AbonnementType::class, 'type_abonnement_id');
     }

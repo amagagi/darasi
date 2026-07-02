@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class TentativeTest extends Model
 {
+    protected $table = 'tentatives_tests';
+
     protected $fillable = [
         'inscription_id', 'test_id', 'note', 'est_valide',
         'tentative_numero', 'date_tentative', 'date_prochaine_autorisee'

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Test extends Model
 {
+
     protected $fillable = ['module_id', 'titre', 'description', 'ordre'];
 
     public function module()

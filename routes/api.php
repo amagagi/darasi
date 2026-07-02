@@ -15,9 +15,9 @@ use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\FormateurController;
 use App\Http\Controllers\Api\ApprenantAbonnementController;
 
-// Routes publiques
-Route::post("/register", [AuthController::class, "register"]);
-Route::post("/login", [AuthController::class, "login"]);
+
+Route::post('/register', [AuthController::class, 'register'])->middleware('recaptcha');
+Route::post('/login', [AuthController::class, 'login'])->middleware('recaptcha');
 
 Route::get("/cours", [CoursController::class, "index"]);
 Route::get("/cours/{id}", [CoursController::class, "show"]);
