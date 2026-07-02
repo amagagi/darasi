@@ -37,8 +37,9 @@ class AuthController extends Controller
             'prenom' => $request->prenom,
             'email' => $request->email,
             'telephone' => $request->telephone,
-            'password' => Hash::make($request->password),
+            'password' => $request->password,  // ← Hash::make() retiré (le mutateur s'en occupe)
             'role' => $request->role ?? 'apprenant',
+            'is_active' => ($request->role === 'formateur') ? false : true,  // ← Formateur en attente
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -99,10 +100,17 @@ class AuthController extends Controller
             ]);
         }
 
-        // Vérifier si le compte est actif
+        // ✅ Vérifier si le compte est actif
         if (!$user->is_active) {
             throw ValidationException::withMessages([
-                'login' => ['Votre compte est désactivé. Contactez l\'administrateur.'],
+                'login' => ['Votre compte est en attente de validation. Veuillez contacter l\'administrateur.'],
+            ]);
+        }
+
+        // ✅ Vérifier si le formateur est validé par l'admin
+        if ($user->role === 'formateur' && !$user->email_verified_at) {
+            throw ValidationException::withMessages([
+                'login' => ['Votre compte formateur est en attente de validation par l\'administrateur.'],
             ]);
         }
 
