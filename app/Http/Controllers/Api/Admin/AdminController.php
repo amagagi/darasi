@@ -12,6 +12,7 @@ use App\Models\AutorisationCorrection;
 use App\Models\DemandesFormation;
 use App\Models\Module;
 use App\Models\Lecon;
+use App\Models\Categorie;
 use Carbon\Carbon;
 use App\Models\AbonnementType;
 use Illuminate\Support\Facades\DB;
@@ -726,25 +727,27 @@ class AdminController extends Controller
      * @method GET
      * @endpoint /api/admin/abonnements
      */
-    public function listAbonnements(Request $request)
+        public function listAbonnements(Request $request)
     {
         $this->checkAdmin();
         
-        $query = AbonnementType::query();
+        $query = AbonnementType::with('categorie')->orderBy('ordre');
         
-        // Filtre par statut actif/inactif
         if ($request->has('est_actif')) {
             $query->where('est_actif', $request->est_actif);
         }
         
-        $abonnements = $query->orderBy('ordre')->get();
+        if ($request->has('categorie_id')) {
+            $query->where('categorie_id', $request->categorie_id);
+        }
+        
+        $abonnements = $query->get();
         
         return response()->json([
             'success' => true,
             'data' => $abonnements
         ]);
     }
-
     /**
      * Voir un abonnement
      * 
@@ -781,6 +784,7 @@ class AdminController extends Controller
             'nb_cours_max' => 'nullable|integer',
             'est_populaire' => 'boolean',
             'ordre' => 'integer',
+            'categorie_id' => 'required|exists:categories,id',
         ]);
         
         if ($validator->fails()) {
@@ -796,6 +800,7 @@ class AdminController extends Controller
             'est_populaire' => $request->est_populaire ?? false,
             'est_actif' => true,
             'ordre' => $request->ordre ?? 0,
+            'categorie_id' => $request->categorie_id,
         ]);
         
         return response()->json([
@@ -803,6 +808,24 @@ class AdminController extends Controller
             'message' => 'Abonnement créé avec succès',
             'data' => $abonnement
         ], 201);
+    }
+
+        /**
+     * Liste des catégories pour les abonnements
+     * 
+     * @method GET
+     * @endpoint /api/admin/categories
+     */
+    public function listCategories()
+    {
+        $this->checkAdmin();
+        
+        $categories = Categorie::with('pole')->orderBy('pole_id')->orderBy('ordre')->get();
+        
+        return response()->json([
+            'success' => true,
+            'data' => $categories
+        ]);
     }
 
     /**
@@ -814,6 +837,10 @@ class AdminController extends Controller
     public function updateAbonnement(Request $request, $id)
     {
         $this->checkAdmin();
+        
+        \Log::info('=== UPDATE ABONNEMENT ===');
+        \Log::info('ID: ' . $id);
+        \Log::info('Données reçues:', $request->all());
         
         $abonnement = AbonnementType::findOrFail($id);
         
@@ -829,18 +856,25 @@ class AdminController extends Controller
         ]);
         
         if ($validator->fails()) {
+            \Log::error('Validation échouée:', $validator->errors()->toArray());
             return response()->json(['errors' => $validator->errors()], 422);
         }
         
-        $abonnement->update($request->only([
+        $data = $request->only([
             'nom', 'description', 'duree_jours', 'prix',
             'nb_cours_max', 'est_populaire', 'est_actif', 'ordre'
-        ]));
+        ]);
+        
+        \Log::info('Données à mettre à jour:', $data);
+        
+        $abonnement->update($data);
+        
+        \Log::info('Après update - Prix: ' . $abonnement->fresh()->prix);
         
         return response()->json([
             'success' => true,
             'message' => 'Abonnement modifié avec succès',
-            'data' => $abonnement
+            'data' => $abonnement->fresh()
         ]);
     }
 

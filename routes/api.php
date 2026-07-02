@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\LeconController;
 use App\Http\Controllers\Api\ApprenantController;
 use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\FormateurController;
+use App\Http\Controllers\Api\ApprenantAbonnementController;
 
 // Routes publiques
 Route::post("/register", [AuthController::class, "register"]);
@@ -92,6 +93,7 @@ Route::middleware("auth:sanctum")->group(function () {
         Route::put('/abonnements/{id}', [AdminController::class, 'updateAbonnement']);
         Route::delete('/abonnements/{id}', [AdminController::class, 'deleteAbonnement']);
         Route::put('/abonnements/{id}/toggle', [AdminController::class, 'toggleAbonnement']);
+        Route::get('/categories', [AdminController::class, 'listCategories']);
 
         // Statistiques avancées
         Route::get('/stats/ventes', [AdminController::class, 'ventesParMois']);
@@ -127,6 +129,18 @@ Route::middleware("auth:sanctum")->group(function () {
         Route::post('/messages/{id}/lire', [ApprenantController::class, 'marquerMessageLu']);
         Route::get('/notifications', [ApprenantController::class, 'mesNotifications']);
         Route::post('/notifications/{id}/lire', [ApprenantController::class, 'marquerNotificationLue']);
+    });
+
+
+    // Abonnements
+    Route::prefix('abonnements')->group(function () {
+        Route::get('/', [ApprenantAbonnementController::class, 'index']);
+        Route::get('/categorie/{categorie_id}', [ApprenantAbonnementController::class, 'parCategorie']);
+        Route::post('/souscrire', [ApprenantAbonnementController::class, 'souscrire']);
+        Route::get('/mes-abonnements', [ApprenantAbonnementController::class, 'mesAbonnements']);
+        Route::get('/verifier/{cours_id}', [ApprenantAbonnementController::class, 'verifierAcces']);
+        Route::post('/annuler/{id}', [ApprenantAbonnementController::class, 'annuler']);
+        Route::get('/statut/{transaction_id}', [ApprenantAbonnementController::class, 'statutPaiement']);
     });
 
     // Routes formateur (protégées)
