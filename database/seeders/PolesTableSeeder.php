@@ -9,7 +9,7 @@ class PolesTableSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('poles')->insert([
+        $poles = [
             [
                 'nom' => 'IT',
                 'description' => 'Cours d\'informatique et technologies',
@@ -37,6 +37,13 @@ class PolesTableSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-        ]);
+        ];
+
+        foreach ($poles as $pole) {
+            DB::table('poles')->updateOrInsert(
+                ['slug' => $pole['slug']], // Condition : vérifier par slug
+                $pole // Données à insérer ou mettre à jour
+            );
+        }
     }
 }

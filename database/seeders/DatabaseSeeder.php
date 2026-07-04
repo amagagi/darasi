@@ -19,6 +19,18 @@ class DatabaseSeeder extends Seeder
             LeconsTableSeeder::class,
             InscriptionsTableSeeder::class,
             DemandesFormationTableSeeder::class,
+
+            // Nouveaux seeders
+            TestsTableSeeder::class,
+            TestsFinauxTableSeeder::class,
+            QuestionsTableSeeder::class,
+            ChoixQuestionsTableSeeder::class,
+            ContenusJuridiquesTableSeeder::class,
+            ConfigTentativesTableSeeder::class,
+            TentativesTestsTableSeeder::class,        // ← AJOUTER
+            TentativesTestFinalTableSeeder::class,    // ← AJOUTER
+            CorrectionsOuvertesTableSeeder::class,    // ← AJOUTER
+            AbonnementsSouscritsTableSeeder::class,   // ← AJOUTER
         ]);
     }
 }
