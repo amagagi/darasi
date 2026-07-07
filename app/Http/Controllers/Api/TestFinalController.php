@@ -1,107 +1,77 @@
 <?php
+// app/Http/Controllers/Api/TestFinalController.php
 
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Test;
+use App\Models\TestFinal;
 use App\Models\Inscription;
-use App\Models\ProgresLecon;
-use App\Models\Lecon;
+use App\Models\Module;
 use App\Models\ConfigTentative;
-use App\Models\TentativeTest;
+use App\Models\TentativeTestFinal;
+use App\Models\TentativeTest;        // ✅ AJOUTER CETTE LIGNE
 use App\Models\ReponseQuestion;
 use App\Models\Question;
 use App\Models\ChoixQuestion;
 use App\Models\Notification;
+use App\Models\Certificat;
 use App\Models\Cours;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * CONTROLLER DES TESTS DE MODULE
+ * CONTROLLER DES TESTS FINAUX DE COURS
  * 
- * @description Gère l'accès aux tests de module, la soumission des réponses et les résultats
+ * @description Gère l'accès aux tests finaux, la soumission des réponses et la génération de certificats
  * @author amagagi
  * @version 1.0
  */
-class TestController extends Controller
+class TestFinalController extends Controller
 {
-    /**
-     * Récupérer les questions d'un test de module
+    // 1. getQuestions($testFinalId) - Récupérer les questions du test final
+        /**
+     * Récupérer les questions d'un test final
      * 
      * @method GET
-     * @endpoint /api/tests/{testId}/questions
+     * @endpoint /api/tests/final/{testFinalId}/questions
      * @requires Auth (Bearer Token)
      * 
-     * @url_param int testId required - ID du test
+     * @url_param int testFinalId required - ID du test final
      * 
      * Vérifications :
      * - Inscription au cours
-     * - Toutes les leçons du module complétées
-     * - Nombre de tentatives (max 3)
-     * - Délai entre tentatives (24h)
+     * - Tous les modules du cours sont validés
+     * - Nombre de tentatives (max 2)
+     * - Délai entre tentatives (48h)
      * 
      * @response 200 {
      *   "success": true,
      *   "data": {
-     *     "test": {
+     *     "test_final": {
      *       "id": 1,
-     *       "titre": "Test module 1",
-     *       "duree_limite": 15
+     *       "titre": "Test final - Laravel",
+     *       "duree_limite": 45,
+     *       "note_minimale": 14.0
      *     },
      *     "tentative_numero": 1,
-     *     "max_tentatives": 3,
-     *     "questions": [
-     *       {
-     *         "id": 1,
-     *         "question": "Qu'est-ce que Laravel ?",
-     *         "type": "qcm",
-     *         "points": 2,
-     *         "ordre": 1,
-     *         "choix": [
-     *           {"id": 1, "texte": "...", "ordre": 1},
-     *           {"id": 2, "texte": "...", "ordre": 2}
-     *         ]
-     *       },
-     *       {
-     *         "id": 2,
-     *         "question": "Expliquez le MVC",
-     *         "type": "ouverte",
-     *         "points": 4,
-     *         "ordre": 2
-     *       }
-     *     ]
+     *     "max_tentatives": 2,
+     *     "questions": [...]
      *   }
      * }
      * 
      * @response 403 {
-     *   "error": "Vous devez être inscrit à ce cours"
-     * }
-     * 
-     * @response 403 {
-     *   "error": "Vous devez terminer toutes les leçons de ce module avant de passer le test",
-     *   "lecons_restantes": 2
-     * }
-     * 
-     * @response 403 {
-     *   "error": "Vous avez atteint le nombre maximum de tentatives",
-     *   "max_tentatives": 3
-     * }
-     * 
-     * @response 403 {
-     *   "error": "Vous devez attendre avant de pouvoir retenter le test",
-     *   "prochaine_disponible": "2026-07-08 10:00:00"
+     *   "error": "Vous devez valider tous les modules avant de passer le test final",
+     *   "modules_non_valides": 2
      * }
      */
-    public function getQuestions($testId)
+    public function getQuestions($testFinalId)
     {
         $user = auth()->user();
         
-        // Récupérer le test avec son module et son cours
-        $test = Test::with(['module.cours'])->findOrFail($testId);
-        $module = $test->module;
-        $cours = $module->cours;
+        // Récupérer le test final avec son cours
+        $testFinal = TestFinal::with(['cours'])->findOrFail($testFinalId);
+        $cours = $testFinal->cours;
         
         // 1. Vérifier l'inscription
         $inscription = Inscription::where('apprenant_id', $user->id)
@@ -115,26 +85,49 @@ class TestController extends Controller
             ], 403);
         }
         
-        // 2. Vérifier que toutes les leçons du module sont complétées
-        $totalLecons = Lecon::where('module_id', $module->id)->count();
-        $leconsCompletees = ProgresLecon::whereHas('inscription', function($q) use ($inscription) {
-            $q->where('id', $inscription->id);
-        })->where('est_complete', true)->count();
+        // 2. Vérifier que tous les modules sont validés
+        // Récupérer tous les modules du cours
+        $modules = Module::where('cours_id', $cours->id)->get();
+        $modulesNonValides = [];
+        $modulesValides = 0;
         
-        if ($leconsCompletees < $totalLecons) {
+        // Vérifier chaque module
+        foreach ($modules as $module) {
+            $testModule = $module->test;
+            if ($testModule) {
+                // Vérifier si l'apprenant a validé ce module
+                $tentativeValide = TentativeTest::where('inscription_id', $inscription->id)
+                    ->where('test_id', $testModule->id)
+                    ->where('est_valide', true)
+                    ->exists();
+                
+                if (!$tentativeValide) {
+                    $modulesNonValides[] = $module->titre;
+                } else {
+                    $modulesValides++;
+                }
+            } else {
+                // Si le module n'a pas de test, il est considéré comme validé
+                // (à adapter selon votre logique)
+            }
+        }
+        
+        if (!empty($modulesNonValides)) {
             return response()->json([
-                'error' => 'Vous devez terminer toutes les leçons de ce module avant de passer le test',
-                'lecons_restantes' => $totalLecons - $leconsCompletees
+                'error' => 'Vous devez valider tous les modules avant de passer le test final',
+                'modules_non_valides' => $modulesNonValides,
+                'modules_valides' => $modulesValides,
+                'total_modules' => $modules->count()
             ], 403);
         }
         
         // 3. Vérifier les tentatives
-        $config = ConfigTentative::where('test_id', $testId)->first();
-        $maxTentatives = $config ? $config->max_tentatives : 3;
-        $delaiHeures = $config ? $config->delai_heures : 24;
+        $config = ConfigTentative::where('test_final_id', $testFinalId)->first();
+        $maxTentatives = $config ? $config->max_tentatives : 2;
+        $delaiHeures = $config ? $config->delai_heures : 48;
         
-        $tentativesCount = TentativeTest::where('inscription_id', $inscription->id)
-            ->where('test_id', $testId)
+        $tentativesCount = TentativeTestFinal::where('inscription_id', $inscription->id)
+            ->where('test_final_id', $testFinalId)
             ->count();
         
         if ($tentativesCount >= $maxTentatives) {
@@ -146,22 +139,22 @@ class TestController extends Controller
         
         // 4. Vérifier le délai entre les tentatives
         if ($tentativesCount > 0) {
-            $derniereTentative = TentativeTest::where('inscription_id', $inscription->id)
-                ->where('test_id', $testId)
+            $derniereTentative = TentativeTestFinal::where('inscription_id', $inscription->id)
+                ->where('test_final_id', $testFinalId)
                 ->latest()
                 ->first();
             
             $prochaineAutorisee = $derniereTentative->date_tentative->addHours($delaiHeures);
             if (now()->lt($prochaineAutorisee)) {
                 return response()->json([
-                    'error' => 'Vous devez attendre avant de pouvoir retenter le test',
+                    'error' => 'Vous devez attendre avant de pouvoir retenter le test final',
                     'prochaine_disponible' => $prochaineAutorisee->toDateTimeString()
                 ], 403);
             }
         }
         
         // 5. Récupérer les questions avec leurs choix (sans est_correct)
-        $questions = Question::where('test_id', $testId)
+        $questions = Question::where('test_final_id', $testFinalId)
             ->orderBy('ordre')
             ->get()
             ->map(function($question) {
@@ -173,7 +166,6 @@ class TestController extends Controller
                     'ordre' => $question->ordre
                 ];
                 
-                // Pour les QCM, récupérer les choix (sans est_correct)
                 if ($question->type === 'qcm') {
                     $data['choix'] = ChoixQuestion::where('question_id', $question->id)
                         ->orderBy('ordre')
@@ -193,10 +185,11 @@ class TestController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'test' => [
-                    'id' => $test->id,
-                    'titre' => $test->titre,
-                    'duree_limite' => $test->duree_limite
+                'test_final' => [
+                    'id' => $testFinal->id,
+                    'titre' => $testFinal->titre,
+                    'duree_limite' => $testFinal->duree_limite,
+                    'note_minimale' => $testFinal->note_minimale / 5 // Convertir 70/100 en 14/20
                 ],
                 'tentative_numero' => $tentativesCount + 1,
                 'max_tentatives' => $maxTentatives,
@@ -204,45 +197,36 @@ class TestController extends Controller
             ]
         ]);
     }
-    
-    /**
-     * Soumettre les réponses d'un test de module
+    // 2. submit(Request $request, $testFinalId) - Soumettre les réponses
+        /**
+     * Soumettre les réponses du test final
      * 
      * @method POST
-     * @endpoint /api/tests/{testId}/submit
+     * @endpoint /api/tests/final/{testFinalId}/submit
      * @requires Auth (Bearer Token)
      * 
-     * @url_param int testId required - ID du test
+     * @url_param int testFinalId required - ID du test final
      * 
      * @body_param array reponses required - Liste des réponses
-     * @body_param int reponses[].question_id required - ID de la question
-     * @body_param int reponses[].choix_id optional - ID du choix (pour QCM)
-     * @body_param string reponses[].reponse_texte optional - Réponse texte (pour questions ouvertes)
      * 
      * @response 200 {
      *   "success": true,
-     *   "message": "Test soumis avec succès",
+     *   "message": "Test final soumis avec succès",
      *   "data": {
      *     "tentative_id": 1,
-     *     "note": 14.5,
-     *     "est_valide": true,
-     *     "points_obtenus": 8,
-     *     "total_points": 10,
-     *     "a_questions_ouvertes": true,
-     *     "message_ouvertes": "Certaines questions sont en attente de correction par le formateur."
+     *     "note": 15.5,
+     *     "est_reussi": true,
+     *     "note_minimale": 14.0,
+     *     "certificat_genere": true,
+     *     "certificat_code": "CERT-ABCD1234"
      *   }
      * }
-     * 
-     * @response 422 {
-     *   "error": "Validation des données",
-     *   "errors": {...}
-     * }
      */
-    public function submit(Request $request, $testId)
+    public function submit(Request $request, $testFinalId)
     {
         $user = auth()->user();
         
-        // Validation des données
+        // Validation
         $request->validate([
             'reponses' => 'required|array',
             'reponses.*.question_id' => 'required|exists:questions,id',
@@ -250,10 +234,9 @@ class TestController extends Controller
             'reponses.*.reponse_texte' => 'nullable|string'
         ]);
         
-        // Récupérer le test avec son module
-        $test = Test::with(['module.cours'])->findOrFail($testId);
-        $module = $test->module;
-        $cours = $module->cours;
+        // Récupérer le test final avec son cours
+        $testFinal = TestFinal::with(['cours'])->findOrFail($testFinalId);
+        $cours = $testFinal->cours;
         
         // 1. Vérifier l'inscription
         $inscription = Inscription::where('apprenant_id', $user->id)
@@ -267,25 +250,31 @@ class TestController extends Controller
             ], 403);
         }
         
-        // 2. Vérifier les leçons complétées
-        $totalLecons = Lecon::where('module_id', $module->id)->count();
-        $leconsCompletees = ProgresLecon::whereHas('inscription', function($q) use ($inscription) {
-            $q->where('id', $inscription->id);
-        })->where('est_complete', true)->count();
-        
-        if ($leconsCompletees < $totalLecons) {
-            return response()->json([
-                'error' => 'Vous devez terminer toutes les leçons de ce module avant de passer le test'
-            ], 403);
+        // 2. Vérifier que tous les modules sont validés
+        $modules = Module::where('cours_id', $cours->id)->get();
+        foreach ($modules as $module) {
+            $testModule = $module->test;
+            if ($testModule) {
+                $tentativeValide = TentativeTest::where('inscription_id', $inscription->id)
+                    ->where('test_id', $testModule->id)
+                    ->where('est_valide', true)
+                    ->exists();
+                
+                if (!$tentativeValide) {
+                    return response()->json([
+                        'error' => 'Vous devez valider tous les modules avant de passer le test final'
+                    ], 403);
+                }
+            }
         }
         
         // 3. Vérifier les tentatives
-        $config = ConfigTentative::where('test_id', $testId)->first();
-        $maxTentatives = $config ? $config->max_tentatives : 3;
-        $delaiHeures = $config ? $config->delai_heures : 24;
+        $config = ConfigTentative::where('test_final_id', $testFinalId)->first();
+        $maxTentatives = $config ? $config->max_tentatives : 2;
+        $delaiHeures = $config ? $config->delai_heures : 48;
         
-        $tentativesCount = TentativeTest::where('inscription_id', $inscription->id)
-            ->where('test_id', $testId)
+        $tentativesCount = TentativeTestFinal::where('inscription_id', $inscription->id)
+            ->where('test_final_id', $testFinalId)
             ->count();
         
         if ($tentativesCount >= $maxTentatives) {
@@ -296,16 +285,15 @@ class TestController extends Controller
         
         // 4. Vérifier le délai
         if ($tentativesCount > 0) {
-            $derniereTentative = TentativeTest::where('inscription_id', $inscription->id)
-                ->where('test_id', $testId)
+            $derniereTentative = TentativeTestFinal::where('inscription_id', $inscription->id)
+                ->where('test_final_id', $testFinalId)
                 ->latest()
                 ->first();
             
             $prochaineAutorisee = $derniereTentative->date_tentative->addHours($delaiHeures);
             if (now()->lt($prochaineAutorisee)) {
                 return response()->json([
-                    'error' => 'Vous devez attendre avant de pouvoir retenter le test',
-                    'prochaine_disponible' => $prochaineAutorisee->toDateTimeString()
+                    'error' => 'Vous devez attendre avant de pouvoir retenter le test final'
                 ], 403);
             }
         }
@@ -314,28 +302,27 @@ class TestController extends Controller
         
         try {
             // 5. Créer la tentative
-            $tentative = TentativeTest::create([
+            $tentative = TentativeTestFinal::create([
                 'inscription_id' => $inscription->id,
-                'test_id' => $testId,
+                'test_final_id' => $testFinalId,
                 'tentative_numero' => $tentativesCount + 1,
                 'date_tentative' => now(),
                 'note' => null,
-                'est_valide' => false
+                'est_reussi' => false,
+                'a_obtenu_certificat' => false
             ]);
             
             $totalPoints = 0;
             $pointsObtenus = 0;
             $aQuestionsOuvertes = false;
-            $questionsOuvertesIds = [];
             
             // 6. Traiter chaque réponse
             foreach ($request->reponses as $reponseData) {
                 $question = Question::findOrFail($reponseData['question_id']);
                 $totalPoints += $question->points;
                 
-                // Créer la réponse
                 $reponse = ReponseQuestion::create([
-                    'tentative_test_id' => $tentative->id,
+                    'tentative_final_id' => $tentative->id,
                     'question_id' => $question->id,
                     'choix_id' => $reponseData['choix_id'] ?? null,
                     'reponse_texte' => $reponseData['reponse_texte'] ?? null,
@@ -358,36 +345,46 @@ class TestController extends Controller
                     }
                 }
                 
-                // Questions ouvertes : en attente de correction
                 if ($question->type === 'ouverte') {
                     $aQuestionsOuvertes = true;
-                    $questionsOuvertesIds[] = $question->id;
-                    // Notification envoyée après la transaction
                 }
             }
             
             // 7. Calculer la note sur 20
             $note = $totalPoints > 0 ? round(($pointsObtenus / $totalPoints) * 20, 2) : 0;
-            $estValide = $note >= 10;
+            $noteMinimale = $testFinal->note_minimale / 5; // Convertir 70/100 en 14/20
+            $estReussi = $note >= $noteMinimale;
             
             // 8. Mettre à jour la tentative
             $tentative->update([
                 'note' => $note,
-                'est_valide' => $estValide
+                'est_reussi' => $estReussi
             ]);
             
-            // 9. Si le test est validé, marquer le module comme validé
-            if ($estValide) {
-                // Marquer le module comme validé dans l'inscription
-                // On peut utiliser un champ JSON ou une table dédiée
-                // Pour l'instant, on met à jour tests_modules_valides
-                // Si vous avez une table module_validation, à adapter
+            // 9. Si réussi, générer le certificat
+            $certificat = null;
+            if ($estReussi) {
+                $codeVerification = 'CERT-' . strtoupper(uniqid()) . '-' . substr(md5($user->id . $cours->id . now()), 0, 6);
                 
-                // Option : marquer dans inscriptions.tests_modules_valides
-                // $inscription->update(['tests_modules_valides' => true]);
+                $certificat = Certificat::create([
+                    'inscription_id' => $inscription->id,
+                    'tentative_final_id' => $tentative->id,
+                    'code_verification' => $codeVerification,
+                    'url_pdf' => null,
+                    'date_emission' => now(),
+                    'est_valide' => 1
+                ]);
                 
-                // Ou créer une entrée dans une table module_validations
-                // ModuleValidation::create([...]);
+                $tentative->update([
+                    'a_obtenu_certificat' => true,
+                    'date_obtention_certificat' => now()
+                ]);
+                
+                // Mettre à jour l'inscription
+                $inscription->update([
+                    'statut' => 'termine',
+                    'date_completion' => now()
+                ]);
             }
             
             // 10. Notifier le formateur s'il y a des questions ouvertes
@@ -396,15 +393,14 @@ class TestController extends Controller
                 if ($formateur) {
                     Notification::create([
                         'user_id' => $formateur->id,
-                        'titre' => 'Questions ouvertes en attente de correction',
-                        'message' => "{$user->prenom} {$user->nom} a soumis des réponses ouvertes pour le test '{$test->titre}' du cours '{$cours->titre}'. Veuillez les corriger.",
+                        'titre' => 'Questions ouvertes en attente de correction - Test final',
+                        'message' => "{$user->prenom} {$user->nom} a soumis des réponses ouvertes pour le test final '{$testFinal->titre}' du cours '{$cours->titre}'.",
                         'type' => 'systeme',
                         'data' => json_encode([
-                            'type' => 'correction_ouverte',
+                            'type' => 'correction_finale',
                             'tentative_id' => $tentative->id,
                             'cours_id' => $cours->id,
-                            'test_id' => $testId,
-                            'apprenant_id' => $user->id
+                            'test_final_id' => $testFinalId
                         ])
                     ]);
                 }
@@ -416,86 +412,53 @@ class TestController extends Controller
             $response = [
                 'tentative_id' => $tentative->id,
                 'note' => $note,
-                'est_valide' => $estValide,
+                'est_reussi' => $estReussi,
+                'note_minimale' => $noteMinimale,
                 'points_obtenus' => $pointsObtenus,
                 'total_points' => $totalPoints
             ];
             
+            if ($certificat) {
+                $response['certificat_genere'] = true;
+                $response['certificat_code'] = $certificat->code_verification;
+            }
+            
             if ($aQuestionsOuvertes) {
                 $response['a_questions_ouvertes'] = true;
-                $response['message_ouvertes'] = 'Certaines questions sont en attente de correction par le formateur. Vous serez notifié dès que la correction sera effectuée.';
+                $response['message_ouvertes'] = 'Certaines questions sont en attente de correction. Le certificat sera généré après correction.';
             }
             
             return response()->json([
                 'success' => true,
-                'message' => 'Test soumis avec succès',
+                'message' => $estReussi ? 'Félicitations ! Test final réussi !' : 'Test final non réussi. Réessayez après le délai.',
                 'data' => $response
             ]);
             
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
-                'error' => 'Erreur lors de la soumission du test',
+                'error' => 'Erreur lors de la soumission du test final',
                 'message' => $e->getMessage()
             ], 500);
         }
     }
-    
-    /**
-     * Récupérer les résultats détaillés d'une tentative
+    // 3. getTentativeResults($tentativeId) - Voir les résultats
+        /**
+     * Récupérer les résultats détaillés d'une tentative de test final
      * 
      * @method GET
-     * @endpoint /api/tests/tentatives/{tentativeId}/results
+     * @endpoint /api/tests/final/tentatives/{tentativeId}/results
      * @requires Auth (Bearer Token)
      * 
      * @url_param int tentativeId required - ID de la tentative
-     * 
-     * @response 200 {
-     *   "success": true,
-     *   "data": {
-     *     "tentative_id": 1,
-     *     "tentative_numero": 1,
-     *     "date_tentative": "2026-07-07 10:00:00",
-     *     "note": 14.5,
-     *     "est_valide": true,
-     *     "total_points": 10,
-     *     "points_obtenus": 8,
-     *     "reponses": [
-     *       {
-     *         "question_id": 1,
-     *         "question": "Qu'est-ce que Laravel ?",
-     *         "type": "qcm",
-     *         "choix_choisi": "Un framework PHP",
-     *         "est_correcte": true,
-     *         "points_obtenus": 2,
-     *         "points_max": 2
-     *       },
-     *       {
-     *         "question_id": 2,
-     *         "question": "Expliquez le MVC",
-     *         "type": "ouverte",
-     *         "reponse_texte": "MVC est un pattern...",
-     *         "est_corrige": false,
-     *         "points_obtenus": null,
-     *         "points_max": 4,
-     *         "statut": "en_attente"
-     *       }
-     *     ]
-     *   }
-     * }
-     * 
-     * @response 403 {
-     *   "error": "Vous n'êtes pas autorisé à voir cette tentative"
-     * }
      */
     public function getTentativeResults($tentativeId)
     {
         $user = auth()->user();
         
-        $tentative = TentativeTest::with(['inscription', 'reponses.question.choix'])
+        $tentative = TentativeTestFinal::with(['inscription', 'reponses.question.choix'])
             ->findOrFail($tentativeId);
         
-        // Vérifier que l'utilisateur est bien l'apprenant concerné
         if ($tentative->inscription->apprenant_id !== $user->id) {
             return response()->json([
                 'error' => 'Vous n\'êtes pas autorisé à voir cette tentative'
@@ -524,11 +487,8 @@ class TestController extends Controller
                 $detail['est_correcte'] = $reponse->est_correcte;
                 $detail['points_obtenus'] = $reponse->points_obtenus;
             } else {
-                // Question ouverte
                 $detail['reponse_texte'] = $reponse->reponse_texte;
-                
-                // Vérifier si la question a été corrigée
-                $correction = $reponse->correctionOuverte;
+                $correction = $reponse->correction;
                 if ($correction) {
                     $detail['est_corrige'] = true;
                     $detail['points_obtenus'] = $correction->note_accordee;
@@ -544,6 +504,9 @@ class TestController extends Controller
             $reponsesDetail[] = $detail;
         }
         
+        // Récupérer le certificat si existant
+        $certificat = Certificat::where('tentative_final_id', $tentative->id)->first();
+        
         return response()->json([
             'success' => true,
             'data' => [
@@ -551,53 +514,49 @@ class TestController extends Controller
                 'tentative_numero' => $tentative->tentative_numero,
                 'date_tentative' => $tentative->date_tentative->toDateTimeString(),
                 'note' => $tentative->note,
-                'est_valide' => $tentative->est_valide,
+                'est_reussi' => $tentative->est_reussi,
+                'a_obtenu_certificat' => $tentative->a_obtenu_certificat,
+                'certificat' => $certificat ? [
+                    'id' => $certificat->id,
+                    'code' => $certificat->code_verification,
+                    'date_emission' => $certificat->date_emission->toDateTimeString(),
+                    'est_valide' => $certificat->est_valide
+                ] : null,
                 'total_points' => $totalPoints,
                 'points_obtenus' => $pointsObtenus,
                 'reponses' => $reponsesDetail
             ]
         ]);
     }
-    
-    /**
-     * Vérifier si l'apprenant peut accéder au test
+
+    // 4. checkAccess($testFinalId) - Vérifier l'accès au test final
+        /**
+     * Vérifier si l'apprenant peut accéder au test final
      * 
      * @method GET
-     * @endpoint /api/tests/{testId}/accessible
+     * @endpoint /api/tests/final/{testFinalId}/accessible
      * @requires Auth (Bearer Token)
-     * 
-     * @url_param int testId required - ID du test
-     * 
-     * @response 200 {
-     *   "success": true,
-     *   "data": {
-     *     "accessible": true,
-     *     "reason": null,
-     *     "lecons_restantes": 0,
-     *     "tentatives_restantes": 2,
-     *     "prochaine_disponible": null,
-     *     "module_est_termine": true
-     *   }
-     * }
      */
-    public function checkAccess($testId)
+    public function checkAccess($testFinalId)
     {
         $user = auth()->user();
         
-        $test = Test::with(['module.cours'])->findOrFail($testId);
-        $module = $test->module;
-        $cours = $module->cours;
+        if (!$user) {
+            return response()->json(['success' => false, 'error' => 'Utilisateur non authentifié'], 401);
+        }
+        
+        $testFinal = TestFinal::with(['cours'])->findOrFail($testFinalId);
+        $cours = $testFinal->cours;
         
         $result = [
             'accessible' => true,
             'reason' => null,
-            'lecons_restantes' => 0,
+            'modules_non_valides' => [],
             'tentatives_restantes' => 0,
             'prochaine_disponible' => null,
-            'module_est_termine' => false
+            'tous_modules_valides' => false
         ];
         
-        // Vérifier l'inscription
         $inscription = Inscription::where('apprenant_id', $user->id)
             ->where('cours_id', $cours->id)
             ->where('statut', 'actif')
@@ -609,32 +568,44 @@ class TestController extends Controller
             return response()->json(['success' => true, 'data' => $result]);
         }
         
-        // Vérifier les leçons complétées
-        $totalLecons = Lecon::where('module_id', $module->id)->count();
-        $leconsCompletees = ProgresLecon::whereHas('inscription', function($q) use ($inscription) {
-            $q->where('id', $inscription->id);
-        })->where('est_complete', true)->count();
+        // Vérifier les modules validés
+        $modules = Module::where('cours_id', $cours->id)->get();
+        $modulesNonValides = [];
         
-        $leconsRestantes = $totalLecons - $leconsCompletees;
-        if ($leconsRestantes > 0) {
+        foreach ($modules as $module) {
+            $testModule = $module->test;
+            if ($testModule) {
+                $tentativeValide = TentativeTest::where('inscription_id', $inscription->id)
+                    ->where('test_id', $testModule->id)
+                    ->where('est_valide', true)
+                    ->exists();
+                
+                if (!$tentativeValide) {
+                    $modulesNonValides[] = $module->titre;
+                }
+            }
+        }
+        
+        if (!empty($modulesNonValides)) {
             $result['accessible'] = false;
-            $result['reason'] = 'Vous devez terminer toutes les leçons de ce module';
-            $result['lecons_restantes'] = $leconsRestantes;
+            $result['reason'] = 'Vous devez valider tous les modules avant de passer le test final';
+            $result['modules_non_valides'] = $modulesNonValides;
+            $result['tous_modules_valides'] = false;
             return response()->json(['success' => true, 'data' => $result]);
         }
-        $result['module_est_termine'] = true;
+        
+        $result['tous_modules_valides'] = true;
         
         // Vérifier les tentatives
-        $config = ConfigTentative::where('test_id', $testId)->first();
-        $maxTentatives = $config ? $config->max_tentatives : 3;
-        $delaiHeures = $config ? $config->delai_heures : 24;
+        $config = ConfigTentative::where('test_final_id', $testFinalId)->first();
+        $maxTentatives = $config ? $config->max_tentatives : 2;
+        $delaiHeures = $config ? $config->delai_heures : 48;
         
-        $tentativesCount = TentativeTest::where('inscription_id', $inscription->id)
-            ->where('test_id', $testId)
+        $tentativesCount = TentativeTestFinal::where('inscription_id', $inscription->id)
+            ->where('test_final_id', $testFinalId)
             ->count();
         
-        $tentativesRestantes = $maxTentatives - $tentativesCount;
-        $result['tentatives_restantes'] = $tentativesRestantes;
+        $result['tentatives_restantes'] = $maxTentatives - $tentativesCount;
         
         if ($tentativesCount >= $maxTentatives) {
             $result['accessible'] = false;
@@ -642,25 +613,22 @@ class TestController extends Controller
             return response()->json(['success' => true, 'data' => $result]);
         }
         
-        // Vérifier le délai
         if ($tentativesCount > 0) {
-            $derniereTentative = TentativeTest::where('inscription_id', $inscription->id)
-                ->where('test_id', $testId)
+            $derniereTentative = TentativeTestFinal::where('inscription_id', $inscription->id)
+                ->where('test_final_id', $testFinalId)
                 ->latest()
                 ->first();
             
             $prochaineAutorisee = $derniereTentative->date_tentative->addHours($delaiHeures);
             if (now()->lt($prochaineAutorisee)) {
                 $result['accessible'] = false;
-                $result['reason'] = 'Vous devez attendre avant de pouvoir retenter le test';
+                $result['reason'] = 'Vous devez attendre avant de pouvoir retenter le test final';
                 $result['prochaine_disponible'] = $prochaineAutorisee->toDateTimeString();
                 return response()->json(['success' => true, 'data' => $result]);
             }
         }
         
-        return response()->json([
-            'success' => true,
-            'data' => $result
-        ]);
+        return response()->json(['success' => true, 'data' => $result]);
     }
+
 }

@@ -50,6 +50,12 @@ class Inscription extends Model
         return $this->hasMany(TentativeTestFinal::class);
     }
 
+    // ✅ NOUVELLE RELATION - Dernière tentative du test final
+    public function tentativeFinal()
+    {
+        return $this->hasOne(TentativeTestFinal::class, 'inscription_id')->latest();
+    }
+
     public function certificat()
     {
         return $this->hasOne(Certificat::class);
