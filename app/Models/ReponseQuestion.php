@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class ReponseQuestion extends Model
 {
+    // ✅ AJOUTER CETTE LIGNE
+    protected $table = 'reponses_questions';
+    
     protected $fillable = [
         'tentative_test_id', 'tentative_final_id', 'question_id',
         'reponse_texte', 'choix_id', 'est_correcte', 'points_obtenus'
