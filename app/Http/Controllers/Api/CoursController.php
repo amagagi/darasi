@@ -95,7 +95,7 @@ class CoursController extends Controller
     {
         $cours = Cours::where('id', $id)
             ->where('statut', 'publie')
-            ->with(['pole', 'formateur', 'modules.lecons'])
+            ->with(['pole', 'formateur', 'modules.lecons', 'testFinal'])
             ->firstOrFail();
         
         return response()->json([

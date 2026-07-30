@@ -597,6 +597,12 @@ class TestFinalController extends Controller
         $result['tous_modules_valides'] = true;
         
         // Vérifier les tentatives
+        $validationExists = TentativeTestFinal::where('inscription_id', $inscription->id)
+            ->where('test_final_id', $testFinalId)
+            ->where('est_reussi', true)
+            ->exists();
+        $result['est_valide'] = $validationExists;
+
         $config = ConfigTentative::where('test_final_id', $testFinalId)->first();
         $maxTentatives = $config ? $config->max_tentatives : 2;
         $delaiHeures = $config ? $config->delai_heures : 48;

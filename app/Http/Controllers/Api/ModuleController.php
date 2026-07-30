@@ -63,7 +63,7 @@ class ModuleController extends Controller
         $modules = Module::where('cours_id', $cours_id)
             ->with(['lecons' => function($query) {
                 $query->orderBy('ordre');
-            }])
+            }, 'test'])
             ->orderBy('ordre')
             ->get();
         
@@ -95,7 +95,7 @@ class ModuleController extends Controller
     {
         $module = Module::with(['lecons' => function($query) {
                 $query->orderBy('ordre');
-            }])
+            }, 'test'])
             ->findOrFail($id);
         
         return response()->json([

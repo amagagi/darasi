@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('config_tentatives', function (Blueprint $table) {
             $table->id();
             $table->foreignId('test_id')->nullable()->constrained()->onDelete('cascade');
-            $table->foreignId('test_final_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('test_final_id')->nullable()->constrained('tests_finaux')->onDelete('cascade');
             $table->integer('max_tentatives')->default(3);
             $table->integer('delai_heures')->default(24);
             $table->timestamps();

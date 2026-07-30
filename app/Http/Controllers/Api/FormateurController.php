@@ -228,7 +228,7 @@ class FormateurController extends Controller
         $cours = Cours::where('formateur_id', auth()->id())->findOrFail($id);
         
         $questions = ForumDiscussion::where('cours_id', $id)
-            ->with(['apprenant', 'reponses'])
+            ->with(['apprenant', 'reponses.formateur'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function($q) {
@@ -239,6 +239,14 @@ class FormateurController extends Controller
                     'apprenant' => $q->apprenant->nom . ' ' . $q->apprenant->prenom,
                     'est_resolu' => $q->est_resolu,
                     'nb_reponses' => $q->reponses->count(),
+                    'reponses' => $q->reponses->map(function($r) {
+                        return [
+                            'id' => $r->id,
+                            'contenu' => $r->contenu,
+                            'created_at' => $r->created_at,
+                            'formateur_nom' => $r->formateur ? ($r->formateur->prenom . ' ' . $r->formateur->nom) : 'Formateur'
+                        ];
+                    })->toArray(),
                     'created_at' => $q->created_at
                 ];
             });
