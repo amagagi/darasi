@@ -9,9 +9,17 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
+
+class User extends Authenticatable implements FilamentUser
 {
     use HasApiTokens, HasFactory, Notifiable;
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return true;
+    }
 
     protected $fillable = [
         'nom', 'prenom', 'email', 'telephone', 'password', 'role', 'avatar',

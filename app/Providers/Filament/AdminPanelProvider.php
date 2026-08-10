@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Models\Annonce;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -84,12 +85,31 @@ class AdminPanelProvider extends PanelProvider
                                 NavigationItem::make('Certificats')->url('/admin/certificats'),
                                 NavigationItem::make('Demandes formation')->url('/admin/demande-formations'),
                             ]),
+                        // Cette navigation est construite à la main : une
+                        // ressource Filament n'apparaît QUE si elle est listée
+                        // ici, la découverte automatique étant alors ignorée.
+                        // Filament interdit qu'un groupe ET ses éléments portent
+                        // une icône : l'icône reste sur le groupe, comme pour
+                        // les autres groupes de ce menu.
+                        NavigationGroup::make('Communication')
+                            ->icon('heroicon-o-megaphone')
+                            ->items([
+                                NavigationItem::make('Actualités & alertes')
+                                    ->url('/admin/annonces')
+                                    ->isActiveWhen(fn (): bool => request()->is('admin/annonces*'))
+                                    ->badge(fn (): ?string => self::compteAnnoncesActives()),
+                            ]),
                         NavigationGroup::make('Paramètres')
                             // ->icon('heroicon-o-cog-6-tooth')  ← SUPPRIMÉ
                             ->items([
+                                NavigationItem::make('Vision & Mission')
+                                    ->url('/admin/contenus-site')
+                                    ->icon('heroicon-o-sparkles')
+                                    ->isActiveWhen(fn (): bool => request()->is('admin/contenus-site*')),
                                 NavigationItem::make('Contenus juridiques')
                                     ->url('/admin/contenus-juridiques')
-                                    ->icon('heroicon-o-document-text'),
+                                    ->icon('heroicon-o-document-text')
+                                    ->isActiveWhen(fn (): bool => request()->is('admin/contenus-juridiques*')),
                             ]),
                     ]);
             })
@@ -113,5 +133,23 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
+    }
+
+    /**
+     * Nombre d'annonces actuellement visibles, pour la pastille du menu.
+     *
+     * Renvoie null en cas d'échec : cette requête est exécutée à chaque rendu
+     * de la navigation, et une table absente (déploiement neuf, migrations pas
+     * encore jouées) ne doit pas mettre tout le panel en erreur.
+     */
+    private static function compteAnnoncesActives(): ?string
+    {
+        try {
+            $nombre = Annonce::query()->active()->count();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $nombre > 0 ? (string) $nombre : null;
     }
 }

@@ -29,8 +29,12 @@ class DatabaseSeeder extends Seeder
             ConfigTentativesTableSeeder::class,
             TentativesTestsTableSeeder::class,        // ← AJOUTER
             TentativesTestFinalTableSeeder::class,    // ← AJOUTER
+            ReponsesQuestionsTableSeeder::class,      // ← AJOUTER
             CorrectionsOuvertesTableSeeder::class,    // ← AJOUTER
             AbonnementsSouscritsTableSeeder::class,   // ← AJOUTER
+
+            // Contenus éditoriaux de la vitrine (vision, mission, valeurs)
+            ContenusSiteTableSeeder::class,
         ]);
     }
 }

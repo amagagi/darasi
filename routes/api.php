@@ -17,6 +17,8 @@ use App\Http\Controllers\Api\ApprenantAbonnementController;
 use App\Http\Controllers\Api\TestController;
 use App\Http\Controllers\Api\TestFinalController;
 use App\Http\Controllers\Api\CertificatController;
+use App\Http\Controllers\Api\AnnonceController;
+use App\Http\Controllers\Api\ContenuSiteController;
 
 // ============================================
 // ROUTES PUBLIQUES
@@ -45,6 +47,16 @@ Route::post('/webhooks/komipay', [PaiementController::class, 'webhook']);
 
 // ✅ Certificats - Vérification publique (pas besoin d'auth)
 Route::get('/certificats/verify/{code}', [CertificatController::class, 'verify']);
+
+// Annonces / actualités (vitrine + bandeau d'alerte)
+// Routes publiques : un jeton Sanctum, s'il est présent, élargit simplement
+// l'audience visible (cf. AnnonceController::cibleDepuis).
+Route::get('/annonces', [AnnonceController::class, 'index']);
+Route::get('/annonces/banniere', [AnnonceController::class, 'banniere']);
+Route::get('/annonces/{id}', [AnnonceController::class, 'show'])->whereNumber('id');
+
+// Contenus éditoriaux de la vitrine (vision, mission, valeurs...)
+Route::get('/contenus-site', [ContenuSiteController::class, 'index']);
 
 // ============================================
 // ROUTES PROTÉGÉES (auth:sanctum)

@@ -51,6 +51,11 @@ class AbonnementSouscrit extends Model
         return $this->belongsTo(AbonnementType::class, 'type_abonnement_id');
     }
 
+    public function type()
+    {
+        return $this->belongsTo(AbonnementType::class, 'type_abonnement_id');
+    }
+
     /**
      * La catégorie concernée par l'abonnement
      */

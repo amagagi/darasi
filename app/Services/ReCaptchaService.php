@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Http;
 
 class ReCaptchaService
 {
-    protected string $secretKey;
+    protected ?string $secretKey = null;
 
     public function __construct()
     {
