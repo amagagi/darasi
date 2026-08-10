@@ -34,8 +34,8 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Indigo,
             ])
             ->brandName('DARASI')
-            ->brandLogo(asset('images/logo.png'))
-            ->favicon(asset('images/favicon.ico'))
+            ->brandLogo('/images/logo.png')
+            ->favicon('/images/favicon.ico')
             ->brandLogoHeight('3rem')
             ->navigation(function (NavigationBuilder $builder): NavigationBuilder {
                 return $builder
