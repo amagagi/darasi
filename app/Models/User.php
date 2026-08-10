@@ -23,7 +23,7 @@ class User extends Authenticatable implements FilamentUser
 
     protected $fillable = [
         'nom', 'prenom', 'email', 'telephone', 'password', 'role', 'avatar',
-        'is_active', 'deactivated_reason'  // Ajout des nouveaux champs
+        'is_active', 'deactivated_reason', 'email_verified_at' // Ajout des nouveaux champs
     ];
 
     protected $hidden = [
@@ -204,9 +204,15 @@ class User extends Authenticatable implements FilamentUser
      */
     public function validateByAdmin(): void
     {
-        $this->update([
-            'email_verified_at' => now(),
-        ]);
+        // 🔥 On force l'écriture avec une requête SQL directe (sans cache)
+        \Illuminate\Support\Facades\DB::table('users')
+            ->where('id', $this->id)
+            ->update([
+                'email_verified_at' => now(),
+            ]);
+            
+        // On recharge le modèle depuis la base pour qu'il soit à jour
+        $this->refresh();
     }
 
     /**

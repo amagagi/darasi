@@ -11,8 +11,8 @@ use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Table;
-use Maatwebsite\Excel\Facades\Excel;  // ← AJOUTER
-use App\Exports\UsersExport;           // ← AJOUTER
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\UsersExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Helpers\NotificationHelper;
 
@@ -22,28 +22,27 @@ class UsersTable
     public static function configure(Table $table): Table
     {
         return $table
-        ->headerActions([
-            Action::make('export_excel')
-                ->label('📊 Exporter Excel')
-                ->icon('heroicon-o-document-arrow-down')
-                ->color('success')
-                ->action(function () {
-                    return Excel::download(new UsersExport(), 'utilisateurs.xlsx');
-                }),
-            Action::make('export_pdf')
-                ->label('📄 Exporter PDF')
-                ->icon('heroicon-o-document')
-                ->color('danger')
-                ->action(function () {
-                    $users = \App\Models\User::all();
-                    $pdf = Pdf::loadView('exports.users-pdf', compact('users'));
-                    return response()->streamDownload(function () use ($pdf) {
-                        echo $pdf->output();
-                    }, 'utilisateurs.pdf');
-                }),
-        ])
+            ->headerActions([
+                Action::make('export_excel')
+                    ->label('📊 Exporter Excel')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('success')
+                    ->action(function () {
+                        return Excel::download(new UsersExport(), 'utilisateurs.xlsx');
+                    }),
+                Action::make('export_pdf')
+                    ->label('📄 Exporter PDF')
+                    ->icon('heroicon-o-document')
+                    ->color('danger')
+                    ->action(function () {
+                        $users = \App\Models\User::all();
+                        $pdf = Pdf::loadView('exports.users-pdf', compact('users'));
+                        return response()->streamDownload(function () use ($pdf) {
+                            echo $pdf->output();
+                        }, 'utilisateurs.pdf');
+                    }),
+            ])
             ->columns([
-                // ... le reste de tes colonnes (inchangé)
                 // Avatar
                 ImageColumn::make('avatar')
                     ->label('Avatar')
@@ -146,9 +145,11 @@ class UsersTable
                     ->modalHeading('Valider le formateur')
                     ->modalDescription('Ce formateur pourra se connecter après validation.')
                     ->action(function ($record) {
+                        // Validation en base
+                        $record->refresh();
                         $record->validateByAdmin();
 
-                      // ✅ AJOUTE LA NOTIFICATION ICI
+                        // Notification pour le formateur
                         \App\Helpers\NotificationHelper::send(
                             $record->id,
                             '✅ Compte validé',
@@ -156,14 +157,14 @@ class UsersTable
                             'systeme'
                         );
 
-                        
+                        // Notification pour l'admin
                         Notification::make()
                             ->title('Formateur validé')
                             ->body('Le formateur peut maintenant se connecter.')
                             ->success()
                             ->send();
                     }),
-                    
+                
                 // Action pour activer/désactiver un compte
                 Action::make('toggle_active')
                     ->label(fn ($record) => $record->is_active ? 'Désactiver' : 'Activer')
