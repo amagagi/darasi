@@ -19,6 +19,29 @@ Route::get('/password/reset/{token}', function ($token) {
     return view('auth.reset-password', ['token' => $token]);
 })->name('password.reset');
 
+// ⚠️ AJOUTE CETTE NOUVELLE ROUTE juste en dessous :
+Route::post('/password/reset', function (Illuminate\Http\Request $request) {
+    $request->validate([
+        'token' => 'required',
+        'email' => 'required|email',
+        'password' => 'required|min:8|confirmed',
+    ]);
+
+    // On cherche l'utilisateur avec cet email
+    $user = \App\Models\User::where('email', $request->email)->first();
+
+    if (!$user) {
+        return back()->withErrors(['email' => 'Utilisateur non trouvé.']);
+    }
+
+    // On met à jour le mot de passe
+    $user->password = bcrypt($request->password);
+    $user->save();
+
+    // On redirige vers la page de login Admin avec un message de succès
+    return redirect('/admin/login')->with('status', 'Mot de passe réinitialisé avec succès !');
+})->name('password.update');
+
 
 Route::post('/admin/notifications/{id}/mark-read', function ($id) {
     $notification = Notification::find($id);

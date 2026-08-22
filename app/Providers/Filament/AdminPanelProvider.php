@@ -33,6 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Indigo,
             ])
+            ->passwordReset() // ✅ AJOUTE CETTE LIGNE ICI
             ->brandName('DARASI')
             ->brandLogo('/images/logo.png')
             ->favicon('/images/favicon.ico')

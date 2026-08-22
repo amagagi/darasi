@@ -9,3 +9,21 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/* ✅ AJOUTE CETTE LIGNE : Pour s'assurer que le CSS s'applique APRÈS Filament */
+@layer utilities {
+    /* Déplace le lien "Forgot password?" sous le bouton et le centre */
+    .fi-logo + div + div .text-sm {
+        display: block !important;
+        text-align: center !important;
+        margin-top: 1rem !important;
+    }
+
+    .fi-logo + div + div .text-sm a {
+        color: #818cf8 !important;
+        text-decoration: none;
+    }
+    .fi-logo + div + div .text-sm a:hover {
+        text-decoration: underline;
+    }
+}
