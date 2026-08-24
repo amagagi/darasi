@@ -18,6 +18,14 @@ class ContenuSite extends Model
     public const CLE_MISSION = 'mission';
     public const CLE_VALEURS = 'valeurs';
 
+    /**
+     * Réglage du compteur de visites du footer (App\Http\Controllers\Api\
+     * SiteVisitController::summary()) : `est_actif` pilote l'affichage,
+     * `contenu` est le texte affiché (le jeton {n} est remplacé par le total).
+     * Réutilise cette table plutôt qu'une table de réglages dédiée.
+     */
+    public const CLE_COMPTEUR_VISITES = 'compteur_visites';
+
     protected $fillable = [
         'cle',
         'titre',

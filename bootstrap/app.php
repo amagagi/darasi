@@ -6,6 +6,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use App\Http\Middleware\CheckUserActive;
+use App\Http\Middleware\TrackSiteVisit;
 use App\Http\Middleware\VerifyRecaptcha;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -34,10 +35,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // Middlewares nommés (alias)
         $middleware->alias([
             'recaptcha' => VerifyRecaptcha::class,
+            'track.visit' => TrackSiteVisit::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {
         $schedule->command('abonnements:check-expiration')->dailyAt('08:00');
+        $schedule->command('visits:aggregate')->dailyAt('00:05');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
