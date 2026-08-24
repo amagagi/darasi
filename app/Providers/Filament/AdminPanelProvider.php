@@ -3,6 +3,8 @@
 namespace App\Providers\Filament;
 
 use App\Models\Annonce;
+use App\Models\Partner;
+use App\Models\Platform;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -99,6 +101,17 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/annonces')
                                     ->isActiveWhen(fn (): bool => request()->is('admin/annonces*'))
                                     ->badge(fn (): ?string => self::compteAnnoncesActives()),
+                                NavigationItem::make('Partenaires')
+                                    ->url('/admin/partners')
+                                    ->isActiveWhen(fn (): bool => request()->is('admin/partners*'))
+                                    ->badge(fn (): ?string => self::comptePartnersActifs()),
+                                NavigationItem::make('Statistiques / Chiffres clés')
+                                    ->url('/admin/site-statistics')
+                                    ->isActiveWhen(fn (): bool => request()->is('admin/site-statistics*')),
+                                NavigationItem::make('Plateformes')
+                                    ->url('/admin/platforms')
+                                    ->isActiveWhen(fn (): bool => request()->is('admin/platforms*'))
+                                    ->badge(fn (): ?string => self::comptePlatformsActives()),
                             ]),
                         NavigationGroup::make('Paramètres')
                             // ->icon('heroicon-o-cog-6-tooth')  ← SUPPRIMÉ
@@ -147,6 +160,30 @@ class AdminPanelProvider extends PanelProvider
     {
         try {
             $nombre = Annonce::query()->active()->count();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $nombre > 0 ? (string) $nombre : null;
+    }
+
+    /** Nombre de partenaires actuellement affichés sur le site. */
+    private static function comptePartnersActifs(): ?string
+    {
+        try {
+            $nombre = Partner::query()->active()->count();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $nombre > 0 ? (string) $nombre : null;
+    }
+
+    /** Nombre de plateformes actuellement affichées sur le site. */
+    private static function comptePlatformsActives(): ?string
+    {
+        try {
+            $nombre = Platform::query()->active()->count();
         } catch (\Throwable) {
             return null;
         }

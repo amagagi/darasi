@@ -19,6 +19,10 @@ use App\Http\Controllers\Api\TestFinalController;
 use App\Http\Controllers\Api\CertificatController;
 use App\Http\Controllers\Api\AnnonceController;
 use App\Http\Controllers\Api\ContenuSiteController;
+use App\Http\Controllers\Api\PartnerController;
+use App\Http\Controllers\Api\SiteStatisticController;
+use App\Http\Controllers\Api\PlatformController;
+use App\Http\Controllers\Api\SiteVisitController;
 
 // ============================================
 // ROUTES PUBLIQUES
@@ -57,6 +61,19 @@ Route::get('/annonces/{id}', [AnnonceController::class, 'show'])->whereNumber('i
 
 // Contenus éditoriaux de la vitrine (vision, mission, valeurs...)
 Route::get('/contenus-site', [ContenuSiteController::class, 'index']);
+
+// Partenaires et chiffres clés (section « Ils nous font confiance »)
+Route::get('/partners', [PartnerController::class, 'index']);
+Route::get('/site-statistics', [SiteStatisticController::class, 'index']);
+
+// Nos applications / plateformes
+Route::get('/platforms', [PlatformController::class, 'index']);
+Route::get('/platforms/{slug}', [PlatformController::class, 'show']);
+
+// Compteur de visites — endpoint dédié plutôt qu'un middleware global (le
+// frontend est une SPA, une seule page peut déclencher plusieurs appels API).
+Route::post('/site-visits', [SiteVisitController::class, 'store'])->middleware('track.visit');
+Route::get('/site-visits/summary', [SiteVisitController::class, 'summary']);
 
 // ============================================
 // ROUTES PROTÉGÉES (auth:sanctum)
