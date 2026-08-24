@@ -1,58 +1,70 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# DARASI — Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API Laravel + back-office [Filament](https://filamentphp.com/) de la plateforme d'e-learning DARASI. Sert l'API JSON consommée par le frontend Flutter web ([`../darasi_app`](../darasi_app)) et le panel d'administration à `/admin`.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.3, Laravel 13, Filament 5
+- MySQL 8
+- Sanctum pour l'authentification API
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Installation locale
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+cp .env.example .env
+php artisan key:generate
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Renseigner dans `.env` au minimum : `DB_*` (base MySQL locale), et éventuellement `KOMIPAY_*`/`RECAPTCHA_*` si vous testez le paiement ou la vérification anti-robot (laisser vide désactive ces vérifications, voir les commentaires dans `.env.example`).
 
-## Contributing
+```bash
+php artisan migrate
+php artisan storage:link
+php artisan serve
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Les seeders ne sont **pas** exécutés automatiquement (voir la note ci-dessous). Pour peupler une base neuve avec des données d'exemple :
 
-## Code of Conduct
+```bash
+php artisan db:seed
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Variables d'environnement
 
-## Security Vulnerabilities
+Voir [`.env.example`](.env.example) — chaque variable y est commentée (rôle, valeurs possibles, obligatoire ou non). Les pilotes alternatifs (Redis, S3, Postmark...) sont listés en fin de fichier, commentés, car inertes tant que les pilotes actifs (`database`/`local`) ne sont pas changés.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Déploiement Docker
 
-## License
+Ce dépôt fournit les images consommées par [`../deployment`](../deployment) (`docker-compose.yml`), lui-même son propre dépôt versionné séparément. Voir `../deployment/.env.example` pour les variables spécifiques au déploiement (secrets MySQL, `APP_KEY` de production, clés reCAPTCHA).
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Notes importantes sur le conteneur backend (`deployment/backend/docker-entrypoint.sh`) :
+- Au démarrage, seules les **migrations** sont exécutées (`php artisan migrate --force`) — **pas** de seeding automatique. Un seeder avec un ancien identifiant en dur (`formateur_id`) avait provoqué une boucle de redémarrage en production le jour où ce compte de démo a été supprimé ; le seeding est désormais une opération manuelle (`docker compose exec backend php artisan db:seed`).
+- La limite de taille des images uploadées (actuellement 5 Mo pour le champ « Image d'illustration » d'Actualités & alertes) est fixée à trois niveaux qui doivent rester synchronisés : validation Filament (`->maxSize()`), PHP (`deployment/backend/Dockerfile`, `conf.d/uploads.ini`), et nginx (`deployment/backend/nginx.conf`, `client_max_body_size`).
+
+## Tâches planifiées (cron)
+
+Le planificateur Laravel est configuré dans `bootstrap/app.php` (`withSchedule`). Le serveur doit exécuter `php artisan schedule:run` chaque minute (crontab classique) pour que ces tâches s'exécutent :
+
+| Commande | Fréquence | Rôle |
+|---|---|---|
+| `abonnements:check-expiration` | quotidienne, 08:00 | Vérifie et traite les abonnements arrivant à expiration. |
+| `visits:aggregate` | quotidienne, 00:05 | Recalcule les compteurs de visites (`visit_counters`) et corrige toute dérive du compteur temps réel. |
+
+Commande disponible mais non planifiée automatiquement (à déclencher manuellement ou à ajouter au planificateur selon le besoin) :
+
+| Commande | Rôle |
+|---|---|
+| `komipay:sync` | Synchronise les paiements Komipay. |
+
+## Compteur de visites
+
+Le compteur de visites (footer public + tableau de bord admin) repose sur un endpoint dédié (`POST /api/site-visits`, protégé par le middleware `App\Http\Middleware\TrackSiteVisit`) que le frontend Flutter appelle explicitement à la navigation — pas un middleware global, l'app étant une SPA côté client que Laravel ne voit jamais naviguer.
+
+Le texte et l'activation/désactivation du compteur affiché dans le footer se configurent via l'écran **Vision & Mission** existant (`/admin/contenus-site`) : créez ou éditez le bloc dont la « Clé technique » vaut `compteur_visites` (le champ « Texte » accepte le jeton `{n}`, remplacé par le total). Aucune ligne n'existe par défaut sur une base neuve — le compteur reste alors affiché avec un texte générique tant que ce réglage n'est pas créé.
+
+## Tests
+
+```bash
+php artisan test
+```
