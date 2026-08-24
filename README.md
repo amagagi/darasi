@@ -41,6 +41,7 @@ Ce dépôt fournit les images consommées par [`../deployment`](../deployment) (
 Notes importantes sur le conteneur backend (`deployment/backend/docker-entrypoint.sh`) :
 - Au démarrage, seules les **migrations** sont exécutées (`php artisan migrate --force`) — **pas** de seeding automatique. Un seeder avec un ancien identifiant en dur (`formateur_id`) avait provoqué une boucle de redémarrage en production le jour où ce compte de démo a été supprimé ; le seeding est désormais une opération manuelle (`docker compose exec backend php artisan db:seed`).
 - La limite de taille des images uploadées (actuellement 5 Mo pour le champ « Image d'illustration » d'Actualités & alertes) est fixée à trois niveaux qui doivent rester synchronisés : validation Filament (`->maxSize()`), PHP (`deployment/backend/Dockerfile`, `conf.d/uploads.ini`), et nginx (`deployment/backend/nginx.conf`, `client_max_body_size`).
+- Les fichiers uploadés (images d'annonces, logos de partenaires, visuels de plateformes...) vivent sous `storage/app/public`, monté en volume nommé (`backend_storage` dans `deployment/docker-compose.yml`). Sans ce volume, tout fichier uploadé disparaît au prochain redémarrage du conteneur qui le recrée depuis une nouvelle image, alors que la ligne en base (autre conteneur, volume séparé) survit — c'est exactement ce qui est arrivé à au moins une image d'actualité avant l'ajout de ce volume.
 
 ## Tâches planifiées (cron)
 
