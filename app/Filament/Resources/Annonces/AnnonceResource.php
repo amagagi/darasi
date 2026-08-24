@@ -6,6 +6,7 @@ use App\Filament\Resources\Annonces\Pages\CreateAnnonce;
 use App\Filament\Resources\Annonces\Pages\EditAnnonce;
 use App\Filament\Resources\Annonces\Pages\ListAnnonces;
 use App\Models\Annonce;
+use App\Services\ImageOptimizerService;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -89,6 +90,18 @@ class AnnonceResource extends Resource
                         ->image()
                         ->directory('annonces')
                         ->visibility('public')
+                        ->maxSize(5120) // Ko — 5 Mo
+                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                        ->helperText('Formats acceptés : JPG, PNG, WEBP. Taille maximale : 5 Mo. Dimensions recommandées : 1920×1080px.')
+                        ->afterStateUpdated(function (?string $state): void {
+                            if ($state === null) {
+                                return;
+                            }
+
+                            $optimizer = app(ImageOptimizerService::class);
+                            $optimizer->optimize($state);
+                            $optimizer->thumbnail($state);
+                        })
                         ->columnSpanFull(),
                 ]),
 
