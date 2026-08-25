@@ -11,6 +11,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Filament\Forms;
 use Filament\Tables;
+use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Support\Str;
 
 class CategorieResource extends Resource
@@ -45,7 +46,7 @@ class CategorieResource extends Resource
                 ->required()
                 ->maxLength(100)
                 ->live(onBlur: true)
-                ->afterStateUpdated(fn (string $state, Forms\Set $set) => 
+                ->afterStateUpdated(fn (string $state, Set $set) =>
                     $set('slug', Str::slug($state))
                 ),
 
