@@ -18,6 +18,9 @@ class ContenuSite extends Model
     public const CLE_MISSION = 'mission';
     public const CLE_VALEURS = 'valeurs';
 
+    /** Bloc « Qui sommes-nous ? » de la section À propos de la landing page. */
+    public const CLE_A_PROPOS = 'a_propos';
+
     /**
      * Réglage du compteur de visites du footer (App\Http\Controllers\Api\
      * SiteVisitController::summary()) : `est_actif` pilote l'affichage,

@@ -64,6 +64,14 @@ Le compteur de visites (footer public + tableau de bord admin) repose sur un end
 
 Le texte et l'activation/désactivation du compteur affiché dans le footer se configurent via l'écran **Vision & Mission** existant (`/admin/contenus-site`) : créez ou éditez le bloc dont la « Clé technique » vaut `compteur_visites` (le champ « Texte » accepte le jeton `{n}`, remplacé par le total). Aucune ligne n'existe par défaut sur une base neuve — le compteur reste alors affiché avec un texte générique tant que ce réglage n'est pas créé.
 
+## Contenus éditoriaux (`contenus_site`)
+
+Au-delà de Vision/Mission/Valeurs, cette table sert de support générique à d'autres blocs de contenu ou réglages identifiés par une « clé technique » unique (voir les constantes `ContenuSite::CLE_*`) :
+- `a_propos` — bloc « Qui sommes-nous ? » de la section À propos de la landing page.
+- `compteur_visites` — réglage du compteur de visites (voir ci-dessus), pas un contenu éditorial affiché tel quel.
+
+**Piège à connaître** : `GET /api/contenus-site` renvoie tous les blocs actifs sans distinction de clé — c'est au frontend de filtrer ceux qui le concernent (`VisionMissionSection` ne garde que `vision`/`mission`/`valeurs`, la section À propos ne garde que `a_propos`). Ajouter une nouvelle clé à ce tableau sans l'exclure des vues qui affichent « tout ce qui est actif » la fait apparaître par erreur ailleurs sur le site — c'est exactement ce qui s'est produit avec `compteur_visites` avant correction du filtre côté `VisionMissionSection`.
+
 ## Tests
 
 ```bash

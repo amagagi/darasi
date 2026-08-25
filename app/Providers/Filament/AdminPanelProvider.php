@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Models\Annonce;
 use App\Models\Partner;
 use App\Models\Platform;
+use App\Models\Testimonial;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -112,6 +113,10 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/platforms')
                                     ->isActiveWhen(fn (): bool => request()->is('admin/platforms*'))
                                     ->badge(fn (): ?string => self::comptePlatformsActives()),
+                                NavigationItem::make('Témoignages')
+                                    ->url('/admin/testimonials')
+                                    ->isActiveWhen(fn (): bool => request()->is('admin/testimonials*'))
+                                    ->badge(fn (): ?string => self::compteTestimonialsActifs()),
                             ]),
                         NavigationGroup::make('Paramètres')
                             // ->icon('heroicon-o-cog-6-tooth')  ← SUPPRIMÉ
@@ -184,6 +189,18 @@ class AdminPanelProvider extends PanelProvider
     {
         try {
             $nombre = Platform::query()->active()->count();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $nombre > 0 ? (string) $nombre : null;
+    }
+
+    /** Nombre de témoignages actuellement affichés sur le site. */
+    private static function compteTestimonialsActifs(): ?string
+    {
+        try {
+            $nombre = Testimonial::query()->active()->count();
         } catch (\Throwable) {
             return null;
         }

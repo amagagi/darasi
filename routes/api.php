@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\PartnerController;
 use App\Http\Controllers\Api\SiteStatisticController;
 use App\Http\Controllers\Api\PlatformController;
 use App\Http\Controllers\Api\SiteVisitController;
+use App\Http\Controllers\Api\TestimonialController;
 
 // ============================================
 // ROUTES PUBLIQUES
@@ -69,6 +70,9 @@ Route::get('/site-statistics', [SiteStatisticController::class, 'index']);
 // Nos applications / plateformes
 Route::get('/platforms', [PlatformController::class, 'index']);
 Route::get('/platforms/{slug}', [PlatformController::class, 'show']);
+
+// Témoignages (« Ce que disent nos apprenants »)
+Route::get('/testimonials', [TestimonialController::class, 'index']);
 
 // Compteur de visites — endpoint dédié plutôt qu'un middleware global (le
 // frontend est une SPA, une seule page peut déclencher plusieurs appels API).

@@ -8,11 +8,12 @@ use Illuminate\Database\Seeder;
 class ContenusSiteTableSeeder extends Seeder
 {
     /**
-     * Valeurs de départ de la section « Vision & Mission ».
+     * Valeurs de départ des sections « Vision & Mission » et « À propos ».
      *
-     * `firstOrCreate` et non `updateOrCreate` : l'entrypoint Docker relance
-     * `migrate --seed` à chaque démarrage du conteneur, et les textes modifiés
-     * depuis le back-office ne doivent jamais être réécrasés.
+     * `firstOrCreate` et non `updateOrCreate` : ce seeder est déclenché
+     * manuellement (voir AnnoncesTableSeeder pour le pourquoi), et les textes
+     * modifiés depuis le back-office ne doivent jamais être réécrasés en cas
+     * de relance.
      */
     public function run(): void
     {
@@ -40,6 +41,14 @@ class ContenusSiteTableSeeder extends Seeder
                 'contenu' => "Exigence pédagogique : nous préférons un contenu de moins, bien construit, à dix contenus de remplissage.\n\nProximité : nous restons joignables et nos formateurs répondent réellement.\n\nIntégrité : nous ne promettons pas un emploi, nous délivrons des compétences vérifiables.",
                 'icone' => 'favorite',
                 'ordre' => 3,
+            ],
+            [
+                'cle' => ContenuSite::CLE_A_PROPOS,
+                'titre' => 'Qui sommes-nous ?',
+                'sous_titre' => null,
+                'contenu' => "Nous sommes plus que des simples consultants, des formateurs et des coachs. Nous sommes vos partenaires dans le succès !\n\nNous sommes engagés à aider les personnes et les organisations à naviguer dans la complexité de leurs choix stratégiques et opérationnels.",
+                'icone' => null,
+                'ordre' => 4,
             ],
         ];
 
