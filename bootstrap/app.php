@@ -41,6 +41,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule) {
         $schedule->command('abonnements:check-expiration')->dailyAt('08:00');
         $schedule->command('visits:aggregate')->dailyAt('00:05');
+        // Filet de sécurité si un webhook KomiPay n'arrive jamais (délivrance
+        // ratée, timeout...) : sans ça, un paiement réellement réussi pouvait
+        // rester bloqué "en_attente" indéfiniment, la commande n'étant
+        // documentée que pour un lancement manuel.
+        $schedule->command('komipay:sync')->everyFifteenMinutes();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Paiement;
-use App\Models\Inscription;
 use App\Models\Notification;
 use App\Services\KomiPayService;
 
@@ -36,26 +35,11 @@ class SyncKomipayPayments extends Command
                 $statut = $komiPayService->checkTransactionStatus($paiement->reference_komipay);
 
                 if ($statut === 'success') {
-                    \DB::transaction(function () use ($paiement) {
-                        $paiement->update([
-                            'statut' => 'paye',
-                            'date_paiement' => now()
-                        ]);
-
-                        Inscription::firstOrCreate(
-                            [
-                                'apprenant_id' => $paiement->apprenant_id,
-                                'cours_id' => $paiement->cours_id
-                            ],
-                            [
-                                'statut' => 'actif',
-                                'progression' => 0,
-                                'date_debut' => now()
-                            ]
-                        );
-
-                        $this->info("✅ Paiement confirmé: {$paiement->reference_komipay}");
-                    });
+                    // Gère aussi bien l'inscription à un cours que
+                    // l'activation d'un abonnement, selon ce qui est
+                    // renseigné sur le paiement.
+                    $komiPayService->finaliserPaiement($paiement);
+                    $this->info("✅ Paiement confirmé: {$paiement->reference_komipay}");
                 } elseif ($statut === 'failed') {
                     $paiement->update(['statut' => 'echoue']);
                     $this->warn("❌ Paiement échoué: {$paiement->reference_komipay}");

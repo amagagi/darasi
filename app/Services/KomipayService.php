@@ -5,6 +5,9 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use App\Models\AbonnementSouscrit;
+use App\Models\Inscription;
 use App\Models\Paiement;
 use Exception;
 
@@ -100,13 +103,6 @@ class KomiPayService
 
         try {
             $response = Http::timeout(30)
-                ->withOptions([
-                    'verify' => false,
-                    'curl' => [
-                        CURLOPT_SSL_VERIFYPEER => false,
-                        CURLOPT_SSL_VERIFYHOST => false,
-                    ]
-                ])
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
@@ -147,7 +143,6 @@ class KomiPayService
     {
         try {
             $response = Http::timeout(30)
-                ->withOptions(['verify' => false])
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                     'Authorization' => 'Bearer ' . $token,
@@ -207,10 +202,15 @@ class KomiPayService
                 'challengeWindowSize' => '05'
             ];
 
-            Log::debug('Payload carte', $payload);
+            // Ne jamais logger $payload complet : il contient le numéro de
+            // carte, le nom du porteur et la date d'expiration en clair
+            // (seul le CVV est chiffré à ce stade) — violation PCI-DSS.
+            Log::debug('Paiement carte initié', [
+                'reference_externe' => $payload['reference_externe'],
+                'montant_a_payer' => $payload['montant_a_payer'],
+            ]);
 
             $response = Http::timeout($this->timeout)
-                ->withOptions(['verify' => false])
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                     'Authorization' => 'Bearer ' . $token,
@@ -287,7 +287,6 @@ class KomiPayService
             ];
 
             $response = Http::timeout($this->timeout)
-                ->withOptions(['verify' => false])
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                     'Authorization' => 'Bearer ' . $token
@@ -397,7 +396,6 @@ class KomiPayService
             }
 
             $response = Http::timeout(30)
-                ->withOptions(['verify' => false])
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                     'Authorization' => 'Bearer ' . $token
@@ -464,5 +462,47 @@ class KomiPayService
     {
         Cache::forget('komipay_token');
         Log::info('Cache token KomiPay vidé');
+    }
+
+    /**
+     * Finaliser un paiement confirmé : marque comme payé, puis inscrit au
+     * cours ou active l'abonnement selon ce qui est renseigné sur le
+     * paiement (les deux ne sont jamais présents en même temps). Idempotent :
+     * un paiement déjà "paye" n'est pas retraité. Point d'entrée unique
+     * partagé par le webhook, les endpoints de vérification de statut et la
+     * commande de resynchronisation — pour ne jamais avoir à corriger cette
+     * logique à plusieurs endroits en même temps.
+     */
+    public function finaliserPaiement(Paiement $paiement): void
+    {
+        DB::transaction(function () use ($paiement) {
+            if ($paiement->statut === 'paye') {
+                return;
+            }
+
+            $paiement->update([
+                'statut' => 'paye',
+                'date_paiement' => now()
+            ]);
+
+            if ($paiement->cours_id) {
+                Inscription::firstOrCreate(
+                    [
+                        'apprenant_id' => $paiement->apprenant_id,
+                        'cours_id' => $paiement->cours_id
+                    ],
+                    [
+                        'statut' => 'actif',
+                        'progression' => 0,
+                        'date_debut' => now()
+                    ]
+                );
+            }
+
+            if ($paiement->abonnement_type_id) {
+                AbonnementSouscrit::where('paiement_id', $paiement->id)
+                    ->update(['statut' => 'actif']);
+            }
+        });
     }
 }

@@ -10,7 +10,6 @@ use App\Models\Paiement;
 use App\Services\KomiPayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Exception;
@@ -243,7 +242,22 @@ class PaiementController extends Controller
     {
         switch ($result['status']) {
             case 'success':
-                return $this->finaliserPaiementReussi($paiement, $cours);
+                $this->komiPayService->finaliserPaiement($paiement);
+
+                $inscription = Inscription::where('apprenant_id', $paiement->apprenant_id)
+                    ->where('cours_id', $cours->id)
+                    ->first();
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Paiement réussi !',
+                    'data' => [
+                        'inscription_id' => $inscription?->id,
+                        'cours_id' => $cours->id,
+                        'cours_titre' => $cours->titre,
+                        'transaction_id' => $paiement->transaction_id
+                    ]
+                ]);
 
             case 'pending':
                 // Mettre à jour la référence KomiPay si disponible
@@ -289,42 +303,6 @@ class PaiementController extends Controller
     }
 
     /**
-     * Finaliser un paiement réussi
-     */
-    private function finaliserPaiementReussi(Paiement $paiement, Cours $cours)
-    {
-        return DB::transaction(function () use ($paiement, $cours) {
-            $paiement->update([
-                'statut' => 'paye',
-                'date_paiement' => now()
-            ]);
-
-            $inscription = Inscription::firstOrCreate(
-                [
-                    'apprenant_id' => $paiement->apprenant_id,
-                    'cours_id' => $paiement->cours_id
-                ],
-                [
-                    'statut' => 'actif',
-                    'progression' => 0,
-                    'date_debut' => now()
-                ]
-            );
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Paiement réussi !',
-                'data' => [
-                    'inscription_id' => $inscription->id,
-                    'cours_id' => $cours->id,
-                    'cours_titre' => $cours->titre,
-                    'transaction_id' => $paiement->transaction_id
-                ]
-            ]);
-        });
-    }
-
-    /**
      * Vérifier le statut d'un paiement
      * 
      * @method GET
@@ -365,8 +343,30 @@ class PaiementController extends Controller
             $komipayStatus = $this->komiPayService->checkTransactionStatus($paiement->reference_komipay);
             
             if ($komipayStatus === 'success') {
-                $result = $this->finaliserPaiementReussi($paiement, $paiement->cours);
-                return $result;
+                $this->komiPayService->finaliserPaiement($paiement);
+
+                if ($paiement->cours_id) {
+                    $inscription = Inscription::where('apprenant_id', $paiement->apprenant_id)
+                        ->where('cours_id', $paiement->cours_id)
+                        ->first();
+
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => 'Paiement réussi !',
+                        'data' => [
+                            'inscription_id' => $inscription?->id,
+                            'cours_id' => $paiement->cours_id,
+                            'cours_titre' => $paiement->cours?->titre,
+                            'transaction_id' => $paiement->transaction_id
+                        ]
+                    ]);
+                }
+
+                return response()->json([
+                    'status' => 'success',
+                    'paiement_status' => 'paye',
+                    'message' => 'Paiement confirmé'
+                ]);
             }
             
             if ($komipayStatus === 'failed') {
@@ -400,26 +400,37 @@ class PaiementController extends Controller
      */
     public function webhook(Request $request)
     {
-        Log::info('Webhook KomiPay reçu', $request->all());
-
         $reference = $request->get('reference_transaction') ?? $request->get('reference');
-        
+
+        Log::info('Webhook KomiPay reçu', ['reference' => $reference]);
+
         if (!$reference) {
             return response()->json(['error' => 'Référence manquante'], 400);
         }
 
         $paiement = Paiement::where('reference_komipay', $reference)->first();
-        
+
         if (!$paiement) {
             Log::warning('Paiement non trouvé pour webhook', ['reference' => $reference]);
             return response()->json(['error' => 'Paiement non trouvé'], 404);
         }
 
-        $statut = $request->get('statut') ?? $request->get('etat');
+        if ($paiement->statut === 'paye') {
+            // Déjà finalisé (webhook rejoué par KomiPay) : rien à refaire.
+            return response()->json(['status' => 'ok']);
+        }
 
-        if ($statut === 'SUCCESS' || $statut === 'success') {
-            $this->finaliserPaiementReussi($paiement, $paiement->cours);
-        } elseif ($statut === 'FAILED' || $statut === 'failed') {
+        // Le corps du webhook n'est jamais authentifié (KomiPay ne fournit pas
+        // de signature à vérifier ici) : on ne s'en sert que comme
+        // déclencheur, jamais comme source de vérité pour le statut. Sans ce
+        // rappel serveur-à-serveur, n'importe quel utilisateur connaissant sa
+        // propre reference_komipay (renvoyée par l'API lors de l'initiation
+        // du paiement) pourrait se déclarer "payé" en falsifiant ce webhook.
+        $statutReel = $this->komiPayService->checkTransactionStatus($paiement->reference_komipay);
+
+        if ($statutReel === 'success') {
+            $this->komiPayService->finaliserPaiement($paiement);
+        } elseif ($statutReel === 'failed') {
             $paiement->update(['statut' => 'echoue']);
         }
 
