@@ -122,8 +122,10 @@ class AbonnementSouscrit extends Model
     {
         if (!$this->isActif()) return false;
         
-        // Vérifier si le cours appartient à la catégorie de l'abonnement
+        // Vérifier si le cours appartient à la catégorie de l'abonnement.
+        // categorie_id = null : abonnement "général", couvre toutes les
+        // catégories (voir le formulaire AbonnementTypeResource).
         $cours = Cours::find($coursId);
-        return $cours && $cours->categorie_id === $this->categorie_id;
+        return $cours && ($this->categorie_id === null || $cours->categorie_id === $this->categorie_id);
     }
 }

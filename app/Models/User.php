@@ -136,7 +136,9 @@ class User extends Authenticatable implements FilamentUser
     public function aAbonnementActifPourCategorie($categorieId)
     {
         return $this->abonnements()
-            ->where('categorie_id', $categorieId)
+            // categorie_id = null : abonnement "général", couvre toutes les
+            // catégories (voir le formulaire AbonnementTypeResource).
+            ->where(fn ($q) => $q->whereNull('categorie_id')->orWhere('categorie_id', $categorieId))
             ->where('statut', 'actif')
             ->where('date_fin', '>', now())
             ->exists();
