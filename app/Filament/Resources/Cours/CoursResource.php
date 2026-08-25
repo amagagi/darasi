@@ -83,10 +83,14 @@ class CoursResource extends Resource
             Forms\Components\FileUpload::make('image_couverture')
                 ->image()
                 ->directory('cours/images')
+                ->disk('public')
+                ->visibility('public')
                 ->imagePreviewHeight('150'),
 
             Forms\Components\FileUpload::make('video_presentation')
                 ->directory('cours/videos')
+                ->disk('public')
+                ->visibility('public')
                 ->acceptedFileTypes(['video/mp4', 'video/webm', 'video/ogg']),
 
             Forms\Components\Toggle::make('est_certifiant')
@@ -235,6 +239,7 @@ class CoursResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\ImageColumn::make('image_couverture')
+                    ->disk('public')
                     ->circular(),
 
                 Tables\Columns\IconColumn::make('est_certifiant')

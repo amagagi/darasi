@@ -34,6 +34,7 @@ class CoursInfolist
                     ->numeric()
                     ->placeholder('-'),
                 ImageEntry::make('image_couverture')
+                    ->disk('public')
                     ->placeholder('-'),
                 TextEntry::make('video_presentation')
                     ->placeholder('-'),

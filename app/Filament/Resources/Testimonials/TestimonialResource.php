@@ -76,6 +76,7 @@ class TestimonialResource extends Resource
                         ->label('Photo (optionnelle)')
                         ->image()
                         ->directory('testimonials')
+                        ->disk('public')
                         ->visibility('public')
                         ->maxSize(2048) // Ko — 2 Mo
                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
@@ -125,6 +126,7 @@ class TestimonialResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('photo_path')
                     ->label('Photo')
+                    ->disk('public')
                     ->circular(),
 
                 Tables\Columns\TextColumn::make('author_name')

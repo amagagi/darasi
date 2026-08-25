@@ -71,6 +71,8 @@ class CoursForm
                     ->label('Image de couverture')
                     ->image()
                     ->directory('cours/couvertures')
+                    ->disk('public')
+                    ->visibility('public')
                     ->maxSize(2048),
                     
                 TextInput::make('video_presentation')

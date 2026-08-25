@@ -67,6 +67,7 @@ class PartnerResource extends Resource
                         ->label('Logo')
                         ->image()
                         ->directory('partners')
+                        ->disk('public')
                         ->visibility('public')
                         ->maxSize(2048) // Ko — 2 Mo
                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
@@ -119,6 +120,7 @@ class PartnerResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('logo_path')
                     ->label('Logo')
+                    ->disk('public')
                     ->square(),
 
                 Tables\Columns\TextColumn::make('name')

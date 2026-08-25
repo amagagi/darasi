@@ -89,6 +89,12 @@ class AnnonceResource extends Resource
                         ->label('Image d\'illustration')
                         ->image()
                         ->directory('annonces')
+                        // ->visibility('public') seul ne suffit pas : sans ->disk('public')
+                        // explicite, Filament utilise config('filament.default_filesystem_disk')
+                        // (= FILESYSTEM_DISK, "local" par défaut), dont la racine est
+                        // storage/app/private depuis Laravel 11 — invisible pour nginx/le lien
+                        // symbolique public/storage, qui pointent sur storage/app/public.
+                        ->disk('public')
                         ->visibility('public')
                         ->maxSize(5120) // Ko — 5 Mo
                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])

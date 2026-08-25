@@ -41,6 +41,7 @@ class CoursTable
 
                 ImageColumn::make('image_couverture')
                     ->label('Image')
+                    ->disk('public')
                     ->circular(),
 
                 TextColumn::make('prix')

@@ -111,6 +111,7 @@ class PlatformResource extends Resource
                         ->label('Logo (optionnel)')
                         ->image()
                         ->directory('platforms/logos')
+                        ->disk('public')
                         ->visibility('public')
                         ->maxSize(2048) // Ko — 2 Mo
                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
@@ -121,6 +122,7 @@ class PlatformResource extends Resource
                         ->label('Image de couverture (optionnelle)')
                         ->image()
                         ->directory('platforms/covers')
+                        ->disk('public')
                         ->visibility('public')
                         ->maxSize(5120) // Ko — 5 Mo
                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
@@ -162,6 +164,7 @@ class PlatformResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('logo_path')
                     ->label('Logo')
+                    ->disk('public')
                     ->square(),
 
                 Tables\Columns\TextColumn::make('name')

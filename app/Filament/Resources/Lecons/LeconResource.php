@@ -76,6 +76,8 @@ class LeconResource extends Resource
                 ->label('Fichier PDF')
                 ->acceptedFileTypes(['application/pdf'])
                 ->directory('lecons/pdfs')
+                ->disk('public')
+                ->visibility('public')
                 ->visible(fn ($get) => $get('type_contenu') === 'pdf'),
 
             // Durée de la vidéo
