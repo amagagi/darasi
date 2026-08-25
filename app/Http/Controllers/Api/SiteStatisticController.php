@@ -11,7 +11,8 @@ class SiteStatisticController extends Controller
 {
     /**
      * Statistiques actives, triées par ordre d'affichage. Mêmes règles de
-     * cache que PartnerController::index().
+     * cache que PartnerController::index() (voir son commentaire sur
+     * ->toArray() avant mise en cache).
      */
     public function index(): JsonResponse
     {
@@ -26,7 +27,8 @@ class SiteStatisticController extends Controller
                     'value' => $s->value,
                     'icon' => $s->icon,
                 ])
-                ->values();
+                ->values()
+                ->toArray();
         });
 
         return response()->json([

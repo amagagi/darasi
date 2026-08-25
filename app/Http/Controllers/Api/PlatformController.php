@@ -28,13 +28,17 @@ class PlatformController extends Controller
                 ->get()
                 ->map(fn (Platform $p) => $this->formater($p));
         } else {
+            // ->toArray() avant mise en cache : voir le commentaire équivalent
+            // dans PartnerController::index() (Collection sérialisée via le
+            // pilote "database" pouvant revenir en __PHP_Incomplete_Class).
             $plateformes = Cache::remember('platforms.active', now()->addMinutes(10), function () {
                 return Platform::query()
                     ->active()
                     ->ordered()
                     ->get()
                     ->map(fn (Platform $p) => $this->formater($p))
-                    ->values();
+                    ->values()
+                    ->toArray();
             });
         }
 

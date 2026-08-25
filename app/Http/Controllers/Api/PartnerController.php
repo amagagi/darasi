@@ -16,6 +16,11 @@ class PartnerController extends Controller
      */
     public function index(): JsonResponse
     {
+        // ->toArray() avant la mise en cache : le pilote "database" sérialise
+        // via serialize()/unserialize(), et un objet Collection peut revenir
+        // en __PHP_Incomplete_Class au lieu d'une vraie liste selon l'état de
+        // l'autoloader au moment de la lecture — un tableau PHP simple n'a
+        // pas ce problème.
         $partenaires = Cache::remember('partners.active', now()->addMinutes(10), function () {
             return Partner::query()
                 ->active()
@@ -28,7 +33,8 @@ class PartnerController extends Controller
                     'website_url' => $p->website_url,
                     'description' => $p->description,
                 ])
-                ->values();
+                ->values()
+                ->toArray();
         });
 
         return response()->json([

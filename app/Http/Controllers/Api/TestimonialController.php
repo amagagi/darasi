@@ -28,7 +28,8 @@ class TestimonialController extends Controller
                     'content' => $t->content,
                     'rating' => $t->rating,
                 ])
-                ->values();
+                ->values()
+                ->toArray();
         });
 
         return response()->json([
