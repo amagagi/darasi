@@ -41,8 +41,8 @@ class PolesTableSeeder extends Seeder
 
         foreach ($poles as $pole) {
             DB::table('poles')->updateOrInsert(
-                ['slug' => $pole['slug']], // Condition : vérifier par slug
-                $pole // Données à insérer ou mettre à jour
+                ['slug' => $pole['slug']],
+                $pole
             );
         }
     }

@@ -48,7 +48,7 @@ class CoursController extends Controller
     public function index()
     {
         $cours = Cours::where('statut', 'publie')
-            ->with(['pole', 'formateur'])
+            ->with(['pole', 'formateur','categorie'])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
         
@@ -95,7 +95,7 @@ class CoursController extends Controller
     {
         $cours = Cours::where('id', $id)
             ->where('statut', 'publie')
-            ->with(['pole', 'formateur', 'modules.lecons', 'testFinal'])
+            ->with(['pole', 'formateur','categorie', 'modules.lecons', 'testFinal'])
             ->firstOrFail();
         
         return response()->json([

@@ -17,8 +17,8 @@ class VerifyRecaptcha
 
     public function handle(Request $request, Closure $next)
     {
-        // 🔥 MODE SKIP : Si reCAPTCHA n'est pas configuré, ou si on est en local avec skip_recaptcha
-        if (empty(config('services.recaptcha.secret')) || (app()->environment('local') && $request->has('skip_recaptcha'))) {
+        // 🔥 MODE SKIP : Si reCAPTCHA n'est pas configuré, OU si on est en local (mode développement)
+        if (empty(config('services.recaptcha.secret')) || app()->environment('local')) {
             return $next($request);
         }
 

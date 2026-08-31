@@ -35,6 +35,7 @@ class DatabaseSeeder extends Seeder
         DB::table('notifications')->truncate();
         DB::table('paiements')->truncate();
         DB::table('password_reset_tokens')->truncate(); // ✅ AJOUTE CETTE LIGNE ICI
+        DB::table('sessions')->truncate(); // ✅ AJOUTE CETTE LIGNE ICI (juste après jobs)
         DB::table('jobs')->truncate(); // ✅ AJOUTE CETTE LIGNE ICI
         DB::table('paiements_logs')->truncate();
         DB::table('poles')->truncate();

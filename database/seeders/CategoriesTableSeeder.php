@@ -67,12 +67,59 @@ class CategoriesTableSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+
+            // ===== NOUVELLES CATÉGORIES (Pôle IT) =====
+            [
+                'pole_id' => 1,
+                'nom' => 'IA',
+                'description' => 'Intelligence Artificielle et Machine Learning',
+                'slug' => 'ia',
+                'ordre' => 4,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'pole_id' => 1,
+                'nom' => 'Data Protection',
+                'description' => 'Protection des données et RGPD',
+                'slug' => 'data-protection',
+                'ordre' => 5,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'pole_id' => 1,
+                'nom' => 'ITIL',
+                'description' => 'Gestion des services informatiques',
+                'slug' => 'itil',
+                'ordre' => 6,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'pole_id' => 1,
+                'nom' => 'Développement Web',
+                'description' => 'Création de sites et applications web',
+                'slug' => 'developpement-web',
+                'ordre' => 7,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'pole_id' => 1,
+                'nom' => 'Cybersécurité',
+                'description' => 'Sécurité des systèmes d\'information',
+                'slug' => 'cybersecurite',
+                'ordre' => 8,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ];
 
         foreach ($categories as $categorie) {
             DB::table('categories')->updateOrInsert(
-                ['slug' => $categorie['slug']], // Condition : vérifier par slug
-                $categorie // Données à insérer ou mettre à jour
+                ['slug' => $categorie['slug']],
+                $categorie
             );
         }
     }
