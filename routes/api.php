@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\InscriptionController;
 use App\Http\Controllers\Api\AbonnementController;
 use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\LeconController;
+use App\Http\Controllers\Api\LeconMediaController;
+use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\ApprenantController;
 use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\FormateurController;
@@ -63,6 +65,17 @@ Route::get('/annonces/{id}', [AnnonceController::class, 'show'])->whereNumber('i
 // Contenus éditoriaux de la vitrine (vision, mission, valeurs...)
 Route::get('/contenus-site', [ContenuSiteController::class, 'index']);
 
+// Diffusion des médias de leçon (PDF, vidéo).
+// Hors auth:sanctum à dessein : c'est la SIGNATURE de l'URL qui autorise
+// l'accès. Un lecteur vidéo ou PDF côté navigateur charge l'URL lui-même et ne
+// peut pas joindre d'en-tête Authorization. L'URL est délivrée pour 30 minutes
+// par GET /api/lecons/{id}/media, après contrôle de l'inscription au cours.
+Route::get('/lecons/{lecon}/stream/{type}', [LeconMediaController::class, 'stream'])
+    ->middleware('signed')
+    ->whereNumber('lecon')
+    ->whereIn('type', ['pdf', 'video'])
+    ->name('lecons.media.stream');
+
 // Partenaires et chiffres clés (section « Ils nous font confiance »)
 Route::get('/partners', [PartnerController::class, 'index']);
 Route::get('/site-statistics', [SiteStatisticController::class, 'index']);
@@ -112,6 +125,27 @@ Route::middleware("auth:sanctum")->group(function () {
     Route::get('/cours/{cours_id}/modules', [ModuleController::class, 'index']);
     Route::get('/modules/{id}', [ModuleController::class, 'show']);
     Route::get('/lecons/{id}/contenu', [LeconController::class, 'contenu']);
+    // Renouvelle l'URL signée d'un média (vidéos longues dont l'URL expire).
+    // Paramètre optionnel ?type=pdf|video ; par défaut le type de la leçon.
+    Route::get('/lecons/{id}/media', [LeconMediaController::class, 'refresh']);
+
+    // ── Messagerie formateur ↔ apprenants ────────────────────────────────
+    // Mise à jour par interrogation périodique : `?since=ID` ne renvoie que les
+    // messages postérieurs, ce qui rend le sondage peu coûteux et évite
+    // d'ajouter un service WebSocket au déploiement.
+    Route::prefix('conversations')->group(function () {
+        Route::get('/', [ConversationController::class, 'index']);
+        Route::get('/non-lus', [ConversationController::class, 'nonLus']);
+
+        // Ouvre ou récupère un fil. `groupe` : tous les inscrits du cours.
+        // `prive` : formateur ↔ un apprenant (corps : apprenant_id).
+        Route::post('/cours/{cours}/groupe', [ConversationController::class, 'groupe']);
+        Route::post('/cours/{cours}/prive', [ConversationController::class, 'prive']);
+
+        Route::get('/{conversation}/messages', [ConversationController::class, 'messages']);
+        Route::post('/{conversation}/messages', [ConversationController::class, 'envoyer']);
+        Route::post('/{conversation}/lu', [ConversationController::class, 'marquerCommeLu']);
+    });
     Route::post('/lecons/{id}/complete', [LeconController::class, 'marquerComplete']);
     
     // ==========================================

@@ -63,21 +63,26 @@ class LeconResource extends Resource
                 ->visible(fn ($get) => $get('type_contenu') === 'article')
                 ->columnSpanFull(),
 
-            // Champ pour la vidéo
+            // Vidéo : un seul champ, donc une seule liaison d'état. Il accepte
+            // soit un lien externe (YouTube), soit un chemin de fichier sur le
+            // disque privé — le contrôleur de diffusion distingue les deux et
+            // ne signe que le second.
             Forms\Components\TextInput::make('url_video')
                 ->label('URL de la vidéo')
-                ->url()
-                ->placeholder('https://www.youtube.com/watch?v=... ou /storage/videos/...')
+                ->placeholder('https://www.youtube.com/watch?v=... ou lecons/videos/cours.mp4')
                 ->visible(fn ($get) => $get('type_contenu') === 'video')
-                ->helperText('Lien YouTube ou chemin local'),
+                ->helperText('Lien YouTube, ou chemin d\'un fichier déposé sur le disque privé (diffusé en streaming signé).'),
 
             // Champ pour le PDF
             Forms\Components\FileUpload::make('url_pdf')
                 ->label('Fichier PDF')
                 ->acceptedFileTypes(['application/pdf'])
                 ->directory('lecons/pdfs')
-                ->disk('public')
-                ->visibility('public')
+                // Anciennement disque `public` : le PDF d'un cours payant était
+                // téléchargeable par simple devinette d'URL, sans compte.
+                ->disk(\App\Models\Lecon::DISQUE_PRIVE)
+                ->visibility('private')
+                ->maxSize(64 * 1024)
                 ->visible(fn ($get) => $get('type_contenu') === 'pdf'),
 
             // Durée de la vidéo

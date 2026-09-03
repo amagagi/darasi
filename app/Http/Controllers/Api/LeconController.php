@@ -91,10 +91,15 @@ class LeconController extends Controller
         ];
         
         if ($lecon->type_contenu === 'video') {
-            $response['data']['url'] = $lecon->url_video;
+            // URL signée valable 30 min, ou lien externe (YouTube) tel quel.
+            $response['data']['url'] = $lecon->urlMediaSignee('video');
+            $response['data']['est_externe'] = ! $lecon->estMediaHeberge('video');
             $response['data']['duree'] = $lecon->duree_video;
         } elseif ($lecon->type_contenu === 'pdf') {
-            $response['data']['url'] = asset('storage/' . $lecon->url_pdf);
+            // Anciennement asset('storage/...') : le PDF était alors
+            // téléchargeable par n'importe qui, sans compte.
+            $response['data']['url'] = $lecon->urlMediaSignee('pdf');
+            $response['data']['est_externe'] = false;
         } elseif ($lecon->type_contenu === 'article') {
             $response['data']['contenu'] = $lecon->contenu_text;
         }

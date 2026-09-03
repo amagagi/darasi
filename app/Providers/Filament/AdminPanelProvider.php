@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Models\Annonce;
+use App\Models\ConversationMessage;
 use App\Models\Partner;
 use App\Models\Platform;
 use App\Models\Testimonial;
@@ -102,6 +103,10 @@ class AdminPanelProvider extends PanelProvider
                                     ->url('/admin/annonces')
                                     ->isActiveWhen(fn (): bool => request()->is('admin/annonces*'))
                                     ->badge(fn (): ?string => self::compteAnnoncesActives()),
+                                NavigationItem::make('Messagerie')
+                                    ->url('/admin/messagerie')
+                                    ->isActiveWhen(fn (): bool => request()->is('admin/messagerie*'))
+                                    ->badge(fn (): ?string => self::compteMessagesMasques()),
                                 NavigationItem::make('Partenaires')
                                     ->url('/admin/partners')
                                     ->isActiveWhen(fn (): bool => request()->is('admin/partners*'))
@@ -165,6 +170,21 @@ class AdminPanelProvider extends PanelProvider
     {
         try {
             $nombre = Annonce::query()->active()->count();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $nombre > 0 ? (string) $nombre : null;
+    }
+
+    /**
+     * Nombre de messages masqués par la modération. Même protection que
+     * ci-dessus : une table absente ne doit pas mettre le panel en erreur.
+     */
+    private static function compteMessagesMasques(): ?string
+    {
+        try {
+            $nombre = ConversationMessage::query()->where('est_masque', true)->count();
         } catch (\Throwable) {
             return null;
         }
