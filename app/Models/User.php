@@ -220,7 +220,9 @@ class User extends Authenticatable implements FilamentUser
     /**
      * Désactiver un compte
      */
-    public function deactivate(string $reason = null): void
+    // `?string` explicite : `string $reason = null` est déprécié depuis
+    // PHP 8.4 et deviendra une erreur fatale.
+    public function deactivate(?string $reason = null): void
     {
         $this->update([
             'is_active' => false,
