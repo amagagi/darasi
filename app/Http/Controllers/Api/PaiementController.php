@@ -16,6 +16,17 @@ use Exception;
 
 class PaiementController extends Controller
 {
+    /**
+     * Au-delà de ce délai, une tentative restée « en_attente » est abandonnée
+     * pour ne plus bloquer un nouvel essai.
+     *
+     * Calé sur la fenêtre réelle de KomiPay, mesurée en conditions réelles :
+     * « Timeout transaction 5 minutes depassé ». On ajoute une marge pour le
+     * temps de propagation, mais bloquer l'apprenant plus longtemps n'aurait
+     * aucun fondement — la transaction est déjà morte côté fournisseur.
+     */
+    private const MINUTES_EXPIRATION_TENTATIVE = 10;
+
     protected $komiPayService;
 
     public function __construct(KomiPayService $komiPayService)
@@ -40,7 +51,8 @@ class PaiementController extends Controller
 
         // 1. Validation
         $validator = Validator::make($request->all(), [
-            'mode_paiement' => 'required|in:CARTE,AIRTEL_MONEY,MY_NITA,AMANATA',
+            // AIRTEL_MONEY retire : reponse nulle de KomiPay (cf. KomiPayService).
+            'mode_paiement' => 'required|in:CARTE,MY_NITA,AMANATA',
             'cours_id' => 'required|exists:cours,id',
         ]);
         
@@ -48,9 +60,13 @@ class PaiementController extends Controller
         if ($request->mode_paiement === 'CARTE') {
             $validator->addRules([
                 'card_holder' => 'required|string|max:255',
-                'card_number' => 'required|string|min:16|max:19',
-                'expiry_date' => 'required|string|size:5',
-                'cvv' => 'required|string|size:3',
+                // `min:16` comptait les CARACTÈRES : « 1234 5678 9012 345 »
+                // (15 chiffres) passait la validation, puis faisait planter le
+                // formatage. On valide donc les chiffres, pas la saisie brute.
+                'card_number' => ['required', 'string', $this->regleNumeroCarte()],
+                // MM/AA, mois valide et carte non expirée.
+                'expiry_date' => ['required', 'string', 'size:5', $this->regleExpiration()],
+                'cvv' => 'required|string|digits_between:3,4',
             ]);
         } else {
             $validator->addRules([
@@ -103,6 +119,18 @@ class PaiementController extends Controller
         }
 
         // 4. Vérifier si paiement déjà en cours
+        //
+        // Un paiement resté « en_attente » ne bloquait auparavant l'utilisateur
+        // SANS AUCUNE LIMITE DE TEMPS. Combiné à komipay:sync qui ignore les
+        // paiements sans reference_komipay, un premier échec interdisait
+        // définitivement l'achat du cours. On abandonne donc les tentatives
+        // trop anciennes avant de tester.
+        Paiement::where('apprenant_id', $user->id)
+            ->where('cours_id', $cours->id)
+            ->where('statut', 'en_attente')
+            ->where('created_at', '<', now()->subMinutes(self::MINUTES_EXPIRATION_TENTATIVE))
+            ->update(['statut' => 'echoue']);
+
         $paiementExistant = Paiement::where('apprenant_id', $user->id)
             ->where('cours_id', $cours->id)
             ->whereIn('statut', ['en_attente', 'paye'])
@@ -115,7 +143,7 @@ class PaiementController extends Controller
                     'message' => 'Vous avez déjà payé ce cours'
                 ], 400);
             }
-            
+
             return response()->json([
                 'status' => 'pending',
                 'message' => 'Un paiement est déjà en cours',
@@ -154,6 +182,63 @@ class PaiementController extends Controller
                 'message' => 'Erreur: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Numéro de carte : 13 à 19 chiffres, validé par l'algorithme de Luhn.
+     *
+     * Le contrôle de Luhn détecte les fautes de frappe localement, ce qui évite
+     * un aller-retour inutile vers la banque et un message d'échec obscur pour
+     * l'apprenant.
+     */
+    private function regleNumeroCarte(): \Closure
+    {
+        return function (string $attribut, $valeur, \Closure $echec) {
+            $chiffres = preg_replace('/\D/', '', (string) $valeur);
+            $longueur = strlen($chiffres);
+
+            if ($longueur < 13 || $longueur > 19) {
+                $echec('Le numéro de carte doit comporter entre 13 et 19 chiffres.');
+                return;
+            }
+
+            // Luhn : on double un chiffre sur deux en partant de la droite.
+            $somme = 0;
+            $doubler = false;
+            for ($i = $longueur - 1; $i >= 0; $i--) {
+                $n = (int) $chiffres[$i];
+                if ($doubler) {
+                    $n *= 2;
+                    if ($n > 9) {
+                        $n -= 9;
+                    }
+                }
+                $somme += $n;
+                $doubler = ! $doubler;
+            }
+
+            if ($somme % 10 !== 0) {
+                $echec('Le numéro de carte est invalide.');
+            }
+        };
+    }
+
+    /** Date d'expiration au format MM/AA, mois valide et carte non expirée. */
+    private function regleExpiration(): \Closure
+    {
+        return function (string $attribut, $valeur, \Closure $echec) {
+            if (! preg_match('#^(0[1-9]|1[0-2])/(\d{2})$#', (string) $valeur, $m)) {
+                $echec('La date d\'expiration doit être au format MM/AA.');
+                return;
+            }
+
+            // Dernier jour du mois : une carte reste valable jusqu'à sa fin.
+            $fin = \Carbon\Carbon::createFromDate(2000 + (int) $m[2], (int) $m[1], 1)->endOfMonth();
+
+            if ($fin->isPast()) {
+                $echec('Cette carte est expirée.');
+            }
+        };
     }
 
     /**
@@ -196,13 +281,14 @@ class PaiementController extends Controller
 
         switch ($internalMethod) {
             case 'CARTE':
-                $cardNumber = preg_replace('/[^0-9]/', '', $request->card_number);
-                $formatted = '';
-                for ($i = 0; $i < 16; $i++) {
-                    if ($i > 0 && $i % 4 === 0) $formatted .= '-';
-                    $formatted .= $cardNumber[$i];
-                }
-                $donneesBase['numero_carte_bancaire'] = $formatted;
+                // Groupement par 4 séparés par des tirets, quelle que soit la
+                // longueur. L'ancienne boucle lisait 16 caractères en dur, sans
+                // contrôle de borne : une carte de moins de 16 chiffres
+                // provoquait une erreur fatale PHP (« Uninitialized string
+                // offset »), une carte de 19 chiffres était tronquée en
+                // silence — donc refusée par la banque.
+                $chiffres = preg_replace('/\D/', '', (string) $request->card_number);
+                $donneesBase['numero_carte_bancaire'] = implode('-', str_split($chiffres, 4));
                 $donneesBase['date_expiration'] = $request->expiry_date;
                 $donneesBase['cvv_number'] = $request->cvv;
                 $donneesBase['javaEnabled'] = false;
@@ -213,7 +299,7 @@ class PaiementController extends Controller
                 $donneesBase['challengeWindowSize'] = '05';
                 break;
 
-            case 'AIRTEL_MONEY':
+            // case 'AIRTEL_MONEY': retiré — cf. KomiPayService.
             case 'MY_NITA':
             case 'AMANATA':
                 $donneesBase['numero_telephone_payeur'] = $this->formatPhoneNumber($request->telephone);
@@ -226,13 +312,13 @@ class PaiementController extends Controller
     /**
      * Formater le numéro de téléphone
      */
+    /**
+     * Délègue au service : cette logique existait en trois copies divergentes
+     * (ici, dans ApprenantAbonnementController et dans KomiPayService).
+     */
     private function formatPhoneNumber($phone)
     {
-        $phone = preg_replace('/\s+/', '', $phone);
-        if (!str_starts_with($phone, '+227')) {
-            $phone = '+227' . $phone;
-        }
-        return $phone;
+        return $this->komiPayService->formatPhoneNumber($phone);
     }
 
     /**
@@ -280,7 +366,11 @@ class PaiementController extends Controller
                     'status' => 'pending',
                     'message' => $result['message'] ?? 'Paiement en attente de confirmation',
                     'transaction_id' => $paiement->transaction_id,
-                    'reference_komipay' => $paiement->reference_komipay
+                    'reference_komipay' => $paiement->reference_komipay,
+                    // MyNITA : le message invite à régler « en guichet NITA via
+                    // le code d'achat ». Sans ce champ, l'apprenant n'a aucun
+                    // moyen de l'obtenir.
+                    'code_achat' => $result['code_achat'] ?? $paiement->code_achat,
                 ]);
 
             case 'failed':
@@ -335,7 +425,8 @@ class PaiementController extends Controller
             return response()->json([
                 'status' => 'pending',
                 'paiement_status' => $paiement->statut,
-                'message' => 'En attente de confirmation'
+                'message' => 'En attente de confirmation',
+                'code_achat' => $paiement->code_achat,
             ]);
         }
 
@@ -381,7 +472,10 @@ class PaiementController extends Controller
             
             return response()->json([
                 'status' => 'pending',
-                'message' => 'Paiement en cours de traitement'
+                'message' => 'Paiement en cours de traitement',
+                // Renvoye a chaque sondage : l'apprenant garde son code
+                // d'achat MyNITA meme s'il recharge l'ecran.
+                'code_achat' => $paiement->code_achat,
             ]);
 
         } catch (Exception $e) {

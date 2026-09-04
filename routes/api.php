@@ -50,6 +50,14 @@ Route::get("/poles/{id}/cours", [PoleController::class, "cours"]);
 Route::post("/demandes-formation", [DemandeController::class, "store"]);
 
 // Webhook (public)
+// ATTENTION : la documentation KomiPay ne décrit AUCUNE notification
+// serveur-à-serveur. Le seul champ de rappel documenté est `url_retour`, propre
+// à l'endpoint `generate-payment-gateway` (page de paiement hébergée) que nous
+// n'utilisons pas. Cette route ne sera donc en pratique jamais appelée.
+// La confirmation des paiements repose entièrement sur l'interrogation de
+// `check-transaction-status` : sondage depuis l'application et commande
+// planifiée `komipay:sync`. Route conservée au cas où KomiPay ajouterait des
+// webhooks — elle revérifie de toute façon le statut auprès d'eux.
 Route::post('/webhooks/komipay', [PaiementController::class, 'webhook']);
 
 // ✅ Certificats - Vérification publique (pas besoin d'auth)

@@ -14,7 +14,9 @@ class Paiement extends Model
         'transaction_id',           // ← AJOUTER
         'tentatives',               // ← AJOUTER
         'erreur_message',           // ← AJOUTER
-        'code_validation'           // ← AJOUTER
+        'code_validation',          // ← AJOUTER
+        // Code d'achat MyNITA, permettant le règlement en guichet NITA.
+        'code_achat'
     ];
 
     protected $casts = [

@@ -203,6 +203,15 @@ class PaiementResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->copyable(),
 
+                // MyNITA : permet au support de redonner son code à un
+                // apprenant qui souhaite régler en guichet NITA.
+                Tables\Columns\TextColumn::make('code_achat')
+                    ->label('Code d\'achat')
+                    ->searchable()
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->copyable(),
+
                 Tables\Columns\TextColumn::make('tentatives')
                     ->label('Tent.')
                     ->numeric()

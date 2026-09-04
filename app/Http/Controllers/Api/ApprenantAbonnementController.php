@@ -90,7 +90,7 @@ class ApprenantAbonnementController extends Controller
          * @requires Auth (Bearer Token)
          * 
          * @body_param int abonnement_type_id required - ID de la formule
-         * @body_param string mode_paiement required - CARTE, AIRTEL_MONEY, MY_NITA, AMANATA
+         * @body_param string mode_paiement required - CARTE, MY_NITA, AMANATA
          * @body_param string telephone required for mobile money - Numéro de téléphone
          * 
          * @response 200 {
@@ -104,8 +104,9 @@ class ApprenantAbonnementController extends Controller
         {
             $validator = Validator::make($request->all(), [
                 'abonnement_type_id' => 'required|exists:abonnements_types,id',
-                'mode_paiement' => 'required|in:CARTE,AIRTEL_MONEY,MY_NITA,AMANATA',
-                'telephone' => 'required_if:mode_paiement,AIRTEL_MONEY,MY_NITA,AMANATA|string|min:8'
+                // AIRTEL_MONEY retire : reponse nulle de KomiPay (cf. KomiPayService).
+                'mode_paiement' => 'required|in:CARTE,MY_NITA,AMANATA',
+                'telephone' => 'required_if:mode_paiement,MY_NITA,AMANATA|string|min:8'
             ]);
 
             if ($validator->fails()) {
@@ -260,11 +261,9 @@ class ApprenantAbonnementController extends Controller
          */
         private function formatPhoneNumber($phone)
         {
-            $phone = preg_replace('/\s+/', '', $phone);
-            if (!str_starts_with($phone, '+227')) {
-                $phone = '+227' . $phone;
-            }
-            return $phone;
+            // Délègue au service : cette logique existait en trois copies,
+            // dont deux transformaient « 22790000159 » en « +22722790000159 ».
+            return app(\App\Services\KomiPayService::class)->formatPhoneNumber($phone);
         }
     /**
      * Mes abonnements actifs

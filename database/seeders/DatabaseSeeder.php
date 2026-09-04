@@ -11,6 +11,22 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // GARDE-FOU. Ce seeder VIDE 32 tables, dont users, cours, inscriptions
+        // et paiements, avant de réinsérer un jeu de données figé. Le lancer
+        // en production détruirait irrémédiablement les comptes, les achats et
+        // les progressions des apprenants.
+        //
+        // L'entrypoint Docker ne l'exécute pas, mais un « php artisan db:seed »
+        // tapé à la main sur le serveur suffirait. Pour semer délibérément une
+        // base de production neuve :
+        //     DB_SEED_AUTORISE=1 php artisan db:seed
+        if (app()->environment('production') && ! env('DB_SEED_AUTORISE')) {
+            $this->command->error('Refus : ce seeder vide la base (users, cours, paiements...).');
+            $this->command->warn('Sur une base neuve uniquement : DB_SEED_AUTORISE=1 php artisan db:seed');
+
+            return;
+        }
+
         // Désactive les vérifications de clés étrangères pour vider les tables sans erreur
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 

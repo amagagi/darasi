@@ -52,7 +52,8 @@ class AbonnementController extends Controller
         $abonnement = AbonnementType::where('est_actif', true)->findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'mode_paiement' => 'required|in:CARTE,AIRTEL_MONEY,MY_NITA,AMANATA',
+            // AIRTEL_MONEY retire : reponse nulle de KomiPay (cf. KomiPayService).
+            'mode_paiement' => 'required|in:CARTE,MY_NITA,AMANATA',
             'telephone' => 'required_unless:mode_paiement,CARTE|nullable|string|min:8',
             'card_holder' => 'required_if:mode_paiement,CARTE|nullable|string|max:255',
             'card_number' => 'required_if:mode_paiement,CARTE|nullable|string|min:16|max:19',

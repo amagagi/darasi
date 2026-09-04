@@ -45,7 +45,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // ratée, timeout...) : sans ça, un paiement réellement réussi pouvait
         // rester bloqué "en_attente" indéfiniment, la commande n'étant
         // documentée que pour un lancement manuel.
-        $schedule->command('komipay:sync')->everyFifteenMinutes();
+        // Toutes les 5 min et non 15 : la fenêtre de validation KomiPay est de
+        // 5 minutes (« Timeout transaction 5 minutes depassé »), un passage
+        // toutes les 15 min laissait donc des paiements confirmés en attente
+        // bien plus longtemps que nécessaire.
+        $schedule->command('komipay:sync')->everyFiveMinutes();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
