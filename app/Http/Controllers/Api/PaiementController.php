@@ -8,6 +8,7 @@ use App\Models\Cours;
 use App\Models\Inscription;
 use App\Models\Paiement;
 use App\Services\KomiPayService;
+use App\Services\NotificationPaiementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -28,10 +29,14 @@ class PaiementController extends Controller
     private const MINUTES_EXPIRATION_TENTATIVE = 10;
 
     protected $komiPayService;
+    protected NotificationPaiementService $notifications;
 
-    public function __construct(KomiPayService $komiPayService)
-    {
+    public function __construct(
+        KomiPayService $komiPayService,
+        NotificationPaiementService $notifications,
+    ) {
         $this->komiPayService = $komiPayService;
+        $this->notifications = $notifications;
     }
 
     /**
@@ -353,6 +358,8 @@ class PaiementController extends Controller
 
                 // Si redirection 3DS, retourner l'URL
                 if (isset($result['redirect_url'])) {
+                    $this->notifications->enAttente($paiement->fresh());
+
                     return response()->json([
                         'status' => 'redirect',
                         'message' => 'Redirection 3DS nécessaire',
@@ -361,7 +368,15 @@ class PaiementController extends Controller
                     ]);
                 }
 
-                // Paiement en attente (mobile money)
+                // Paiement en attente (mobile money).
+                // Trace persistante : la boite de dialogue peut etre fermee
+                // avant la confirmation, qui arrive parfois plusieurs minutes
+                // plus tard via komipay:sync.
+                $this->notifications->enAttente(
+                    $paiement->fresh(),
+                    $result['code_achat'] ?? $paiement->code_achat,
+                );
+
                 return response()->json([
                     'status' => 'pending',
                     'message' => $result['message'] ?? 'Paiement en attente de confirmation',
@@ -378,6 +393,8 @@ class PaiementController extends Controller
                     'statut' => 'echoue',
                     'erreur_message' => $result['message'] ?? 'Paiement échoué'
                 ]);
+
+                $this->notifications->echoue($paiement->fresh(), $result['message'] ?? null);
 
                 return response()->json([
                     'status' => 'failed',

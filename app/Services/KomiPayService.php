@@ -657,5 +657,10 @@ class KomiPayService
                     ->update(['statut' => 'actif']);
             }
         });
+
+        // Trace persistante. La boîte de dialogue de suivi peut avoir été
+        // fermée depuis longtemps : la confirmation arrive parfois par
+        // komipay:sync, plusieurs minutes après l'achat.
+        app(NotificationPaiementService::class)->confirme($paiement->fresh());
     }
 }

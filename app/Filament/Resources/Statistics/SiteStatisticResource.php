@@ -40,11 +40,24 @@ class SiteStatisticResource extends Resource
                 ->placeholder('Ex : Apprenants formés')
                 ->columnSpanFull(),
 
+            // Une valeur calculée est toujours exacte : elle interdit
+            // d'annoncer « 15 000 apprenants » sans apprenant en base.
+            Forms\Components\Select::make('value_source')
+                ->label('Origine de la valeur')
+                ->options(['' => 'Valeur saisie à la main'] + \App\Models\SiteStatistic::SOURCES)
+                ->default('')
+                ->native(false)
+                ->live()
+                ->dehydrateStateUsing(fn ($state) => $state === '' ? null : $state)
+                ->helperText('Une origine calculée lit la donnée réelle et ignore la saisie ci-dessous.'),
+
             Forms\Components\TextInput::make('value')
                 ->label('Valeur')
-                ->required()
                 ->maxLength(50)
                 ->placeholder('Ex : 1200+, 98%, 15')
+                // Obligatoire uniquement en saisie manuelle.
+                ->required(fn ($get) => blank($get('value_source')))
+                ->disabled(fn ($get) => filled($get('value_source')))
                 ->helperText('Chaîne libre : les suffixes ("+", "%") sont acceptés tels quels.'),
 
             Forms\Components\Select::make('icon')
