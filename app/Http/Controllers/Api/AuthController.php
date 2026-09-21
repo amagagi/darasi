@@ -275,9 +275,8 @@ class AuthController extends Controller
             ], 400);
         }
         
-        $user->forceFill([
-            'password' => Hash::make($request->password)
-        ])->save();
+        $user->password = $request->password; // Le mutateur bcrypt() s'occupe du hachage
+        $user->save();
         
         return response()->json([
             'success' => true,
