@@ -233,9 +233,8 @@ class AuthController extends Controller
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user, $password) {
-                $user->forceFill([
-                    'password' => Hash::make($password)
-                ])->save();
+                $user->password = $password; // Le mutateur bcrypt() s'occupe du hachage
+                $user->save();
             }
         );
         
