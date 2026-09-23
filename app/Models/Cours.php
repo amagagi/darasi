@@ -99,6 +99,17 @@ class Cours extends Model
         return $this->belongsTo(User::class, 'formateur_id');
     }
 
+    /**
+     * Signataires propres au certificat de ce cours. Vide : les signataires
+     * par défaut s'appliquent (voir CertificatService::signatairesPour).
+     */
+    public function signataires()
+    {
+        return $this->belongsToMany(Signataire::class, 'cours_signataire')
+            ->orderBy('signataires.ordre')
+            ->orderBy('signataires.id');
+    }
+
             /**
          * Accesseur pour nb_apprenants (calculé dynamiquement)
          */

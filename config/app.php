@@ -55,6 +55,13 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+    | Adresse publique du front Flutter. Sert aux liens imprimés sur les
+    | documents, comme l'URL de vérification d'un certificat. Identique à
+    | APP_URL en production, où front et API partagent le même domaine.
+    */
+    'frontend_url' => env('FRONTEND_URL', env('APP_URL', 'http://localhost')),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

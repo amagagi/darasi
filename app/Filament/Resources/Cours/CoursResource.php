@@ -110,6 +110,16 @@ class CoursResource extends Resource
                 ->visible(fn ($get) => $get('est_certifiant') === true)
                 ->required(fn ($get) => $get('est_certifiant') === true),
 
+            Forms\Components\Select::make('signataires')
+                ->label('Signataires du certificat')
+                ->relationship('signataires', 'nom')
+                ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->nom} — {$record->fonction}")
+                ->multiple()
+                ->preload()
+                ->maxItems(\App\Models\Signataire::MAXIMUM_PAR_CERTIFICAT)
+                ->helperText('Laisser vide pour utiliser les signataires par défaut (menu Signataires).')
+                ->visible(fn ($get) => $get('est_certifiant') === true),
+
             Forms\Components\Toggle::make('est_gratuit')
                 ->label('Gratuit')
                 ->helperText('Ce cours est accessible gratuitement')

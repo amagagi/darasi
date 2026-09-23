@@ -8,6 +8,7 @@ use App\Models\AbonnementType;
 use App\Models\AbonnementSouscrit;
 use App\Models\Categorie;
 use App\Models\Paiement;
+use App\Services\NotificationPaiementService;
 use App\Models\Cours;
 use App\Models\Inscription;
 use Illuminate\Http\Request;
@@ -348,10 +349,27 @@ class ApprenantAbonnementController extends Controller
                 $abonnement->update(['statut' => 'actif']);
             }
             $paiement->update(['statut' => 'paye', 'date_paiement' => now()]);
-            
+
+            app(NotificationPaiementService::class)->confirme($paiement->fresh());
+
             return response()->json(['status' => 'success', 'message' => 'Paiement confirmé']);
         }
-        
+
+        // Sans cette branche, un echec restait indefiniment « en attente » :
+        // le suivi cote application sondait jusqu'a son delai maximum avant
+        // d'annoncer « non confirme », alors que KomiPay avait deja tranche.
+        if ($komipayStatus === 'failed') {
+            $abonnement = AbonnementSouscrit::where('paiement_id', $paiement->id)->first();
+            if ($abonnement) {
+                $abonnement->update(['statut' => 'annule']);
+            }
+            $paiement->update(['statut' => 'echoue']);
+
+            app(NotificationPaiementService::class)->echoue($paiement->fresh());
+
+            return response()->json(['status' => 'failed', 'message' => 'Le paiement a échoué']);
+        }
+
         return response()->json(['status' => 'pending', 'message' => 'En attente de confirmation']);
     }
 

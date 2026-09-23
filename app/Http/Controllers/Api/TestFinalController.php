@@ -15,6 +15,7 @@ use App\Models\Question;
 use App\Models\ChoixQuestion;
 use App\Models\Notification;
 use App\Models\Certificat;
+use App\Services\CertificatService;
 use App\Models\Cours;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -374,6 +375,19 @@ class TestFinalController extends Controller
                     'date_emission' => now(),
                     'est_valide' => 1
                 ]);
+
+                // Signatures figées dès l'émission : le certificat porte les
+                // signataires en fonction le jour de la réussite.
+                try {
+                    app(CertificatService::class)->figerSignatures($certificat);
+                } catch (\Throwable $e) {
+                    // Sans conséquence pour l'apprenant : elles seront figées
+                    // au premier téléchargement du PDF.
+                    \Illuminate\Support\Facades\Log::warning("Signatures non figées à l'émission du certificat", [
+                        'certificat_id' => $certificat->id,
+                        'erreur' => $e->getMessage(),
+                    ]);
+                }
                 
                 $tentative->update([
                     'a_obtenu_certificat' => true,

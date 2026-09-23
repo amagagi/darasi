@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Certificat;
 use App\Models\Inscription;
+use App\Services\CertificatService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 
 /**
  * CONTROLLER DES CERTIFICATS
@@ -16,6 +18,13 @@ use Illuminate\Http\Request;
  */
 class CertificatController extends Controller
 {
+    /** Validité des liens signés du PDF. */
+    public const MINUTES_VALIDITE_URL = 10;
+
+    public function __construct(private readonly CertificatService $certificats)
+    {
+    }
+
     /**
      * Liste des certificats de l'apprenant connecté
      * 
@@ -60,7 +69,9 @@ class CertificatController extends Controller
                     'id' => $certificat->inscription->cours->id,
                     'titre' => $certificat->inscription->cours->titre
                 ],
-                'note' => $certificat->inscription->tentativeFinal->note ?? null
+                'note' => $certificat->inscription->tentativeFinal->note ?? null,
+                'date_revocation' => $certificat->date_revocation?->toDateTimeString(),
+                'url_verification' => $this->certificats->urlVerification($certificat),
             ];
         });
         
@@ -132,6 +143,11 @@ class CertificatController extends Controller
                 'est_valide' => (bool) $certificat->est_valide,
                 'date_revocation' => $certificat->date_revocation ? $certificat->date_revocation->toDateTimeString() : null,
                 'motif_revocation' => $certificat->motif_revocation,
+                'url_verification' => $this->certificats->urlVerification($certificat),
+                'signataires' => $certificat->signatures->map(fn ($signature) => [
+                    'nom' => $signature->nom,
+                    'fonction' => $signature->fonction,
+                ])->values(),
                 'cours' => [
                     'id' => $certificat->inscription->cours->id,
                     'titre' => $certificat->inscription->cours->titre,
@@ -199,22 +215,46 @@ class CertificatController extends Controller
                     'code' => $certificat->code_verification,
                     'date_emission' => $certificat->date_emission->toDateTimeString(),
                     'apprenant' => $certificat->inscription->apprenant->prenom . ' ' . $certificat->inscription->apprenant->nom,
-                    'cours' => $certificat->inscription->cours->titre
+                    'cours' => $certificat->inscription->cours->titre,
+                    'date_revocation' => $certificat->date_revocation?->toDateTimeString(),
+                    // Noms et fonctions tels qu'imprimés : un tiers peut ainsi
+                    // confronter le document qu'on lui présente à ce qui a
+                    // réellement été délivré.
+                    'signataires' => $certificat->signatures->map(fn ($signature) => [
+                        'nom' => $signature->nom,
+                        'fonction' => $signature->fonction,
+                    ])->values(),
                 ]
             ]
         ]);
     }
 
     /**
-     * Télécharger le PDF d'un certificat
-     * 
+     * Liens de consultation et de téléchargement du PDF d'un certificat
+     *
+     * Le PDF lui-même est servi par `fichier()`. Cette route renvoie deux URL
+     * signées, valables MINUTES_VALIDITE_URL minutes, que le navigateur ouvre
+     * directement.
+     *
      * @method GET
      * @endpoint /api/certificats/{id}/pdf
      * @requires Auth (Bearer Token)
-     * 
+     *
      * @url_param int id required - ID du certificat
-     * 
-     * @response 200 application/pdf
+     *
+     * @response 200 {
+     *   "success": true,
+     *   "data": {
+     *     "certificat_id": 1,
+     *     "code": "CERT-ABCD12-EFGH34",
+     *     "url_apercu": "https://darasihub.com/api/certificats/1/fichier/apercu?expires=...&signature=...",
+     *     "url_telechargement": "https://darasihub.com/api/certificats/1/fichier/telechargement?expires=...&signature=...",
+     *     "expire_dans": 600
+     *   }
+     * }
+     * @response 403 {
+     *   "error": "Ce certificat a été révoqué : il ne peut plus être téléchargé."
+     * }
      * @response 403 {
      *   "error": "Vous n'êtes pas autorisé"
      * }
@@ -239,32 +279,63 @@ class CertificatController extends Controller
             ], 403);
         }
         
-        // TODO: Générer le PDF avec DomPDF ou autre
-        // Pour l'instant, retourner les données
-        
-        // Si un PDF est déjà généré, retourner le lien
-        if ($certificat->url_pdf) {
+        // Un certificat révoqué n'a plus de valeur : le laisser télécharger
+        // permettrait de le présenter comme valide. L'administration garde
+        // l'accès, le PDF portant alors la mention « RÉVOQUÉ ».
+        if (! $certificat->est_valide && $user->role !== 'admin') {
             return response()->json([
-                'success' => true,
-                'data' => [
-                    'certificat_id' => $certificat->id,
-                    'code' => $certificat->code_verification,
-                    'url_pdf' => $certificat->url_pdf,
-                    'message' => 'PDF déjà généré'
-                ]
-            ]);
+                'success' => false,
+                'error' => 'Ce certificat a été révoqué : il ne peut plus être téléchargé.',
+            ], 403);
         }
-        
-        // Sinon, indiquer que le PDF sera généré
+
+        // Le navigateur ouvre ces liens lui-même, sans en-tête Authorization :
+        // c'est la signature, valable quelques minutes, qui autorise l'accès.
         return response()->json([
             'success' => true,
-            'message' => 'Le PDF sera généré prochainement',
             'data' => [
                 'certificat_id' => $certificat->id,
                 'code' => $certificat->code_verification,
-                'url_pdf' => null
-            ]
+                'url_apercu' => $this->urlFichier($certificat, 'apercu'),
+                'url_telechargement' => $this->urlFichier($certificat, 'telechargement'),
+                'expire_dans' => self::MINUTES_VALIDITE_URL * 60,
+            ],
         ]);
+    }
+
+    /**
+     * Sert le PDF du certificat. L'accès est validé par la signature de l'URL.
+     *
+     * @method GET
+     * @endpoint /api/certificats/{certificat}/fichier/{mode}
+     * @access URL signée, délivrée par GET /api/certificats/{id}/pdf
+     *
+     * @url_param string mode required - `apercu` (affiché) ou `telechargement`
+     *
+     * @response 200 application/pdf
+     * @response 403 Signature absente, invalide ou expirée
+     */
+    public function fichier(Certificat $certificat, string $mode)
+    {
+        $pdf = $this->certificats->genererPdf($certificat);
+        $nom = $this->certificats->nomFichier($certificat);
+
+        $reponse = $mode === 'apercu' ? $pdf->stream($nom) : $pdf->download($nom);
+
+        // Document nominatif : ni cache partagé, ni indexation.
+        $reponse->headers->set('Cache-Control', 'private, max-age=0, no-store');
+        $reponse->headers->set('X-Robots-Tag', 'noindex, nofollow');
+
+        return $reponse;
+    }
+
+    private function urlFichier(Certificat $certificat, string $mode): string
+    {
+        return URL::temporarySignedRoute(
+            'certificats.fichier',
+            now()->addMinutes(self::MINUTES_VALIDITE_URL),
+            ['certificat' => $certificat->id, 'mode' => $mode],
+        );
     }
 
     /**

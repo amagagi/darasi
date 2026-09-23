@@ -31,6 +31,12 @@ class Certificat extends Model
         return $this->belongsTo(TentativeTestFinal::class);
     }
 
+    /** Signatures figées sur ce certificat, dans l'ordre d'impression. */
+    public function signatures()
+    {
+        return $this->hasMany(CertificatSignature::class)->orderBy('ordre')->orderBy('id');
+    }
+
     public function revoquePar()
     {
         return $this->belongsTo(User::class, 'revoque_par');

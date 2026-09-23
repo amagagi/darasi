@@ -88,6 +88,7 @@ class AdminPanelProvider extends PanelProvider
                             ->icon('heroicon-o-document-check')
                             ->items([
                                 NavigationItem::make('Certificats')->url('/admin/certificats'),
+                                NavigationItem::make('Signataires')->url('/admin/signataires'),
                                 NavigationItem::make('Demandes formation')->url('/admin/demande-formations'),
                             ]),
                         // Cette navigation est construite à la main : une

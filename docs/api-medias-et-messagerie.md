@@ -1,7 +1,8 @@
 > **Note paiement KomiPay.** La confirmation des paiements ne repose sur aucun
 > webhook : la documentation KomiPay ne décrit aucune notification
 > serveur-à-serveur. Elle dépend entièrement de `check-transaction-status`,
-> interrogé par l'application (toutes les 4 s pendant un paiement) et par la
+> interrogé par l'application (appels enchaînés, 2 s de pause, pendant un
+> paiement) et par la
 > commande planifiée `komipay:sync` (toutes les 15 min).
 > Piège à connaître : cet endpoint attend `apikey` **sans underscore**, alors
 > que tous les autres utilisent `api_key`.

@@ -63,6 +63,16 @@ Route::post('/webhooks/komipay', [PaiementController::class, 'webhook']);
 // ✅ Certificats - Vérification publique (pas besoin d'auth)
 Route::get('/certificats/verify/{code}', [CertificatController::class, 'verify']);
 
+// PDF du certificat. Hors auth:sanctum à dessein, comme les médias de leçon :
+// le navigateur ouvre le lien lui-même et ne peut pas joindre de jeton. L'URL,
+// valable 10 minutes, est délivrée par GET /api/certificats/{id}/pdf après
+// contrôle du titulaire.
+Route::get('/certificats/{certificat}/fichier/{mode}', [CertificatController::class, 'fichier'])
+    ->middleware('signed')
+    ->whereNumber('certificat')
+    ->whereIn('mode', ['apercu', 'telechargement'])
+    ->name('certificats.fichier');
+
 // Annonces / actualités (vitrine + bandeau d'alerte)
 // Routes publiques : un jeton Sanctum, s'il est présent, élargit simplement
 // l'audience visible (cf. AnnonceController::cibleDepuis).

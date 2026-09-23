@@ -104,6 +104,12 @@ class CertificatResource extends Resource
                     ->badge()
                     ->color('primary'),
 
+                Tables\Columns\TextColumn::make('signatures.nom')
+                    ->label('Signataires')
+                    ->listWithLineBreaks()
+                    ->placeholder('Non figées')
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('code_verification')
                     ->label('Code')
                     ->searchable()
@@ -177,12 +183,41 @@ class CertificatResource extends Resource
                             ->send();
                     }),
 
-                    \Filament\Actions\Action::make('view_pdf')
-                    ->label('Voir PDF')
+                    \Filament\Actions\Action::make('telecharger_pdf')
+                    ->label('PDF')
                     ->color('primary')
-                    ->icon('heroicon-o-document')
-                    ->url(fn ($record) => $record->url_pdf, shouldOpenInNewTab: true)
-                    ->visible(fn ($record) => $record->url_pdf),
+                    ->icon('heroicon-o-arrow-down-tray')
+                    // Même route signée que l'application ; 30 minutes pour
+                    // laisser le temps de parcourir la liste avant de cliquer.
+                    ->url(fn ($record) => \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                        'certificats.fichier',
+                        now()->addMinutes(30),
+                        ['certificat' => $record->id, 'mode' => 'apercu'],
+                    ), shouldOpenInNewTab: true),
+
+                    \Filament\Actions\Action::make('actualiser_signatures')
+                    ->label('Actualiser les signatures')
+                    ->color('gray')
+                    ->icon('heroicon-o-pencil-square')
+                    ->requiresConfirmation()
+                    ->modalHeading('Actualiser les signatures')
+                    ->modalDescription("Les signatures figées sur ce certificat seront remplacées par les signataires actuels du cours. À réserver à la correction d'une erreur : un certificat délivré ne devrait pas changer.")
+                    ->action(function ($record) {
+                        $actualisees = app(\App\Services\CertificatService::class)->actualiserSignatures($record);
+
+                        $notification = \Filament\Notifications\Notification::make();
+
+                        if ($actualisees) {
+                            $notification->title('Signatures actualisées')->success();
+                        } else {
+                            $notification
+                                ->title('Signatures inchangées')
+                                ->body("Aucun signataire n'est configuré pour ce cours. Ajoutez-en dans le menu Signataires.")
+                                ->warning();
+                        }
+
+                        $notification->send();
+                    }),
 
                     \Filament\Actions\ViewAction::make(),
             ])

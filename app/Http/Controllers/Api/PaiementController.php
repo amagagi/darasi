@@ -485,8 +485,12 @@ class PaiementController extends Controller
                 ]);
             }
             
-            $paiement->increment('tentatives');
-            
+            // `tentatives` compte les TENTATIVES DE PAIEMENT (mise a 1 a la
+            // creation), pas les sondages de statut. L'incrementer ici gonflait
+            // la colonne d'administration a chaque interrogation — et, depuis
+            // que le suivi enchaine les appels, cela signifiait une ecriture en
+            // base toutes les deux secondes pour un chiffre depourvu de sens.
+
             return response()->json([
                 'status' => 'pending',
                 'message' => 'Paiement en cours de traitement',
