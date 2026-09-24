@@ -9,7 +9,7 @@ class DemandesFormation extends Model
 {
     protected $table = 'demandes_formation';  // AJOUTE CETTE LIGNE
     protected $fillable = [
-        'nom', 'email', 'telephone', 'titre_cours_souhaite',
+        'type','nom', 'email', 'telephone', 'titre_cours_souhaite',
         'description', 'domaine', 'niveau_souhaite', 'statut',
         'traite_le', 'traite_par', 'commentaire_admin'
     ];

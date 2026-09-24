@@ -12,6 +12,22 @@ class DemandeFormationInfolist
     {
         return $schema
             ->components([
+                // 🆕 Type de demande
+                TextEntry::make('type')
+                    ->label('Type de demande')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'formation' => '📚 Formation',
+                        'assistance' => '🆘 Assistance',
+                        default => $state,
+                    })
+                    ->color(fn ($state) => match ($state) {
+                        'formation' => 'info',
+                        'assistance' => 'warning',
+                        default => 'gray',
+                    })
+                    ->columnSpanFull(),
+
                 TextEntry::make('nom')
                     ->label('Nom complet')
                     ->weight('bold'),
@@ -26,21 +42,31 @@ class DemandeFormationInfolist
                     ->placeholder('Non renseigné')
                     ->icon('heroicon-o-phone'),
 
+                // 🔄 Label dynamique selon le type
                 TextEntry::make('titre_cours_souhaite')
-                    ->label('Cours souhaité')
+                    ->label(fn ($record) => $record->type === 'assistance'
+                        ? '🆘 Sujet de l\'assistance'
+                        : '📚 Cours souhaité')
                     ->badge()
                     ->color('primary'),
 
+                // 🔄 Visible uniquement si formation
                 TextEntry::make('domaine')
                     ->label('Domaine')
-                    ->placeholder('Non précisé'),
+                    ->placeholder('Non précisé')
+                    ->visible(fn ($record) => $record->type === 'formation'),
 
+                // 🔄 Visible uniquement si formation
                 TextEntry::make('niveau_souhaite')
                     ->label('Niveau souhaité')
-                    ->placeholder('Non précisé'),
+                    ->placeholder('Non précisé')
+                    ->visible(fn ($record) => $record->type === 'formation'),
 
+                // 🔄 Label dynamique selon le type
                 TextEntry::make('description')
-                    ->label('Description')
+                    ->label(fn ($record) => $record->type === 'assistance'
+                        ? 'Description du problème'
+                        : 'Description de la demande')
                     ->placeholder('Aucune description')
                     ->columnSpanFull(),
 
@@ -83,7 +109,7 @@ class DemandeFormationInfolist
                 TextEntry::make('updated_at')
                     ->label('Dernière modification')
                     ->dateTime('d/m/Y H:i')
-                    ->hidden(),  // ← CORRIGÉ
+                    ->hidden(),
             ]);
     }
 }

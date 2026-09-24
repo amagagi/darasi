@@ -24,7 +24,7 @@ class DemandeFormationResource extends Resource
 
     protected static ?string $modelLabel = 'Demande';
 
-    protected static ?string $slug = 'demande-formations';  // ← AJOUTER CETTE LIGNE
+    protected static ?string $slug = 'demande-formations';
 
     // =========================
     // FORM
@@ -32,6 +32,19 @@ class DemandeFormationResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
+
+            // 🆕 Type de demande
+            Forms\Components\Select::make('type')
+                ->label('Type de demande')
+                ->options([
+                    'formation' => '📚 Demande de formation',
+                    'assistance' => '🆘 Demande d\'assistance',
+                ])
+                ->default('formation')
+                ->required()
+                ->reactive()
+                ->native(false)
+                ->columnSpanFull(),
 
             Forms\Components\TextInput::make('nom')
                 ->label('Nom')
@@ -48,23 +61,33 @@ class DemandeFormationResource extends Resource
                 ->label('Téléphone')
                 ->maxLength(20),
 
+            // 🔄 Label dynamique selon le type
             Forms\Components\TextInput::make('titre_cours_souhaite')
-                ->label('Titre du cours souhaité')
+                ->label(fn ($get) => $get('type') === 'assistance'
+                    ? '🆘 Sujet de l\'assistance'
+                    : '📚 Titre du cours souhaité')
                 ->required()
                 ->maxLength(200),
 
+            // 🔄 Label dynamique selon le type
             Forms\Components\Textarea::make('description')
-                ->label('Description')
+                ->label(fn ($get) => $get('type') === 'assistance'
+                    ? 'Description du problème'
+                    : 'Description de la demande')
                 ->rows(4)
                 ->columnSpanFull(),
 
+            // 🔄 Visible uniquement pour formation
             Forms\Components\TextInput::make('domaine')
                 ->label('Domaine')
-                ->maxLength(100),
+                ->maxLength(100)
+                ->visible(fn ($get) => $get('type') === 'formation'),
 
+            // 🔄 Visible uniquement pour formation
             Forms\Components\TextInput::make('niveau_souhaite')
                 ->label('Niveau souhaité')
-                ->maxLength(100),
+                ->maxLength(100)
+                ->visible(fn ($get) => $get('type') === 'formation'),
 
             Forms\Components\Select::make('statut')
                 ->label('Statut')
@@ -101,7 +124,7 @@ class DemandeFormationResource extends Resource
     }
 
     // =========================
-    // INFOLIST  ← NOUVEAU
+    // INFOLIST
     // =========================
     public static function infolist(Schema $schema): Schema
     {
@@ -116,6 +139,21 @@ class DemandeFormationResource extends Resource
         return $table
             ->columns([
 
+                // 🆕 Colonne Type
+                Tables\Columns\TextColumn::make('type')
+                    ->label('Type')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'formation' => '📚 Formation',
+                        'assistance' => '🆘 Assistance',
+                        default => $state,
+                    })
+                    ->colors([
+                        'info' => 'formation',
+                        'warning' => 'assistance',
+                    ])
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('nom')
                     ->label('Demandeur')
                     ->searchable()
@@ -128,10 +166,11 @@ class DemandeFormationResource extends Resource
 
                 Tables\Columns\TextColumn::make('telephone')
                     ->label('Téléphone')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('titre_cours_souhaite')
-                    ->label('Cours souhaité')
+                    ->label('Sujet / Cours')
                     ->searchable()
                     ->limit(40),
 
@@ -162,6 +201,14 @@ class DemandeFormationResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
+                // 🆕 Filtre par type
+                Tables\Filters\SelectFilter::make('type')
+                    ->label('Type')
+                    ->options([
+                        'formation' => '📚 Formation',
+                        'assistance' => '🆘 Assistance',
+                    ]),
+
                 Tables\Filters\SelectFilter::make('statut')
                     ->label('Statut')
                     ->options([
@@ -190,7 +237,7 @@ class DemandeFormationResource extends Resource
             'index' => \App\Filament\Resources\DemandeFormations\Pages\ListDemandeFormations::route('/'),
             'create' => \App\Filament\Resources\DemandeFormations\Pages\CreateDemandeFormation::route('/create'),
             'edit' => \App\Filament\Resources\DemandeFormations\Pages\EditDemandeFormation::route('/{record}/edit'),
-            'view' => \App\Filament\Resources\DemandeFormations\Pages\ViewDemandeFormation::route('/{record}'),  // ← AJOUTÉ
+            'view' => \App\Filament\Resources\DemandeFormations\Pages\ViewDemandeFormation::route('/{record}'),
         ];
     }
 }

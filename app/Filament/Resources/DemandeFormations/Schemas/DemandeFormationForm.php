@@ -15,6 +15,19 @@ class DemandeFormationForm
     {
         return $schema
             ->components([
+                // 🆕 Type de demande
+                Select::make('type')
+                    ->label('Type de demande')
+                    ->options([
+                        'formation' => '📚 Demande de formation',
+                        'assistance' => '🆘 Demande d\'assistance',
+                    ])
+                    ->default('formation')
+                    ->required()
+                    ->reactive()
+                    ->native(false)
+                    ->columnSpanFull(),
+
                 TextInput::make('nom')
                     ->label('Nom')
                     ->required()
@@ -30,23 +43,33 @@ class DemandeFormationForm
                     ->label('Téléphone')
                     ->maxLength(20),
 
+                // 🔄 Label dynamique
                 TextInput::make('titre_cours_souhaite')
-                    ->label('Titre du cours souhaité')
+                    ->label(fn ($get) => $get('type') === 'assistance'
+                        ? '🆘 Sujet de l\'assistance'
+                        : '📚 Titre du cours souhaité')
                     ->required()
                     ->maxLength(200),
 
+                // 🔄 Label dynamique
                 Textarea::make('description')
-                    ->label('Description')
+                    ->label(fn ($get) => $get('type') === 'assistance'
+                        ? 'Description du problème'
+                        : 'Description de la demande')
                     ->rows(4)
                     ->columnSpanFull(),
 
+                // 🔄 Visible uniquement pour formation
                 TextInput::make('domaine')
                     ->label('Domaine')
-                    ->maxLength(100),
+                    ->maxLength(100)
+                    ->visible(fn ($get) => $get('type') === 'formation'),
 
+                // 🔄 Visible uniquement pour formation
                 TextInput::make('niveau_souhaite')
                     ->label('Niveau souhaité')
-                    ->maxLength(100),
+                    ->maxLength(100)
+                    ->visible(fn ($get) => $get('type') === 'formation'),
 
                 Select::make('statut')
                     ->label('Statut')

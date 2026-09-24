@@ -43,8 +43,15 @@ class DemandeController extends Controller
      * }
      */
     public function store(Request $request)
-    {
+    {   
+        // 🔍 LOGS TEMPORAIRES DE DEBUG
+        \Log::info('=== DEMANDE STORE ===');
+        \Log::info('Content-Type: ' . $request->header('Content-Type'));
+        \Log::info('Method: ' . $request->method());
+        \Log::info('All: ' . json_encode($request->all()));
+        \Log::info('Raw: ' . $request->getContent());
         $validator = Validator::make($request->all(), [
+            'type' => 'required|in:formation,assistance',
             'nom' => 'required|string|max:100',
             'email' => 'required|email|max:150',
             'telephone' => 'nullable|string|max:20',
@@ -61,6 +68,7 @@ class DemandeController extends Controller
         }
 
         $demande = DemandesFormation::create([
+            'type' => $request->type,  // 🆕 AJOUT
             'nom' => $request->nom,
             'email' => $request->email,
             'telephone' => $request->telephone,
@@ -71,10 +79,21 @@ class DemandeController extends Controller
             'statut' => 'en_attente',
         ]);
 
+        // Message adaptatif selon le type
+        if ($request->type === 'assistance') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Votre demande d\'assistance a été enregistrée. Redirection vers notre canal WhatsApp...',
+                'data' => $demande,
+                'whatsapp_url' => config('darasi.whatsapp_assistance_url'),
+            ], 201);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Votre demande de formation a été envoyée avec succès. Nous vous contacterons prochainement.',
-            'data' => $demande
+            'data' => $demande,
+            'whatsapp_url' => null,
         ], 201);
     }
 }
